@@ -91,7 +91,6 @@ nav:
     - PydanticAI: skills/pydantic-ai.md
     - Gradio: skills/gradio.md
     - Kubernetes: skills/kubernetes.md
-    - Vertex AI: skills/vertex-ai.md
   - Agents:
     - Overview: agents/index.md
     - Expert Coder: agents/expert-coder.md

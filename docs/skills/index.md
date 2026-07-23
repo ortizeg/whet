@@ -72,7 +72,6 @@ Skills for packaging, deploying, and maintaining projects.
 | [Docker CV](docker-cv.md) | Containerization for CV workloads | Docker |
 | [PyPI](pypi.md) | Python package publishing | build, twine |
 | [GCP](gcp.md) | Google Cloud Platform services for ML workflows | gcloud, google-cloud-storage, google-cloud-aiplatform |
-| [Vertex AI](vertex-ai.md) | Custom-container training and pipelines on Vertex AI | google-cloud-aiplatform |
 | [GitHub Actions](github-actions.md) | CI/CD pipeline configuration | GitHub Actions |
 | [GitHub Repo Setup](github-repo-setup.md) | Repository initialization and configuration | gh CLI |
 | [Pre-commit](pre-commit.md) | Git hook automation | pre-commit |

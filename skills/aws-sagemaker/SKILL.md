@@ -6,7 +6,7 @@ description: >
   jobs, registering models, tuning hyperparameters, building SageMaker Pipelines, or
   wiring S3 data in and out. Reach for it any time the target is AWS-managed ML
   infrastructure, even if the user just says "train this in the cloud" and means AWS.
-  Not for Google Cloud / Vertex AI training (see vertex-ai) or self-managed Kubernetes
+  Not for Google Cloud / Vertex AI training (see gcp) or self-managed Kubernetes
   (see kubernetes).
 ---
 

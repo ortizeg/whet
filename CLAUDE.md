@@ -13,7 +13,7 @@ Distribution: `uvx whet` (one-shot) / `uv tool install whet` (permanent)
 
 ### What whet provides
 
-- **33 Skills** — Best-practice knowledge modules (PyTorch Lightning, Pydantic, Docker, FastAPI, Hugging Face, AWS SageMaker, Gradio, Kubernetes, Model Evaluation, etc.)
+- **32 Skills** — Best-practice knowledge modules (PyTorch Lightning, Pydantic, Docker, FastAPI, Hugging Face, AWS SageMaker, Gradio, Kubernetes, Model Evaluation, etc.)
 - **6 Agents** — Pre-configured behavioral profiles (Expert Coder, ML Engineer, DevOps/Infra, Data Engineer, Code Review, Test Engineer)
 - **6+ Archetypes** — Complete project templates for common CV/ML project types
 - **CLI** — `whet add`, `whet install`, `whet list`, `whet search`, `whet doctor`

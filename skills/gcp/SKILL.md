@@ -5,8 +5,8 @@ description: >
   images to Artifact Registry, storing datasets and checkpoints in Cloud Storage (gsutil,
   gcsfuse, the Python client), and provisioning with the gcloud CLI. Reach for it any
   time the project touches GCP buckets, registries, or gcloud commands, even if the user
-  doesn't name the specific service. For the Vertex AI custom-training SDK specifically
-  see vertex-ai; for the AWS equivalent see aws-sagemaker.
+  doesn't name the specific service — including submitting Vertex AI custom training jobs
+  and retrieving their artifacts. For the AWS equivalent see aws-sagemaker.
 ---
 
 # GCP Skill
@@ -206,6 +206,29 @@ model = job.run(
 ### Prebuilt Training Containers
 
 Skip building a custom image: pass a Google prebuilt container (e.g. `us-docker.pkg.dev/vertex-ai/training/pytorch-gpu.2-3:latest`) as `container_uri` to `from_local_script`, plus `requirements=["torchvision", "albumentations", ...]` for extra deps.
+
+### Retrieving Artifacts After Training
+
+**The training VM is ephemeral — anything not written to GCS is gone when the job ends.**
+Write checkpoints and exports to the GCS path Vertex provides (`AIP_MODEL_DIR`), then pull
+them down explicitly once the job finishes. Do not assume the job "left them somewhere".
+
+```python
+import os
+
+# Inside the training container: write to the GCS path Vertex provides.
+# Falls back to a local dir so the same script runs off-cloud unchanged.
+model_dir = os.environ.get("AIP_MODEL_DIR", "outputs/model")
+trainer.save_checkpoint(f"{model_dir}/best.ckpt")
+```
+
+```bash
+# After the job completes: sync every artifact to the local machine.
+gcloud storage rsync -r "gs://my-bucket/jobs/${JOB_ID}/model" ./artifacts/
+
+# Verify before deleting anything remote.
+ls -lh ./artifacts/
+```
 
 ## Docker Image Management
 
@@ -435,11 +458,12 @@ Add the GCP client libraries with `pixi add google-cloud-storage google-cloud-ai
 3. **Use Workload Identity Federation** — OIDC tokens over long-lived service account keys.
 4. **Keep datasets in Cloud Storage, not images** — mount via gcsfuse or download at job start.
 5. **Set `staging_bucket`** — Vertex AI needs one for scripts and intermediate artifacts.
-6. **Keep resources regional and co-located** to minimize egress cost and latency.
-7. **Configure GCS lifecycle rules** to auto-delete stale checkpoints/outputs.
-8. **Prefer prebuilt Vertex AI containers** — optimized CUDA/NCCL.
-9. **Tag with both version and `latest`** — reproducibility plus dev convenience.
-10. **Grant least-privilege IAM** — `roles/aiplatform.user` for jobs, `roles/storage.objectViewer` for read-only data.
+6. **Write outputs to `AIP_MODEL_DIR` and pull them down when the job finishes** — the training VM is ephemeral; un-synced artifacts are lost.
+7. **Keep resources regional and co-located** to minimize egress cost and latency.
+8. **Configure GCS lifecycle rules** to auto-delete stale checkpoints/outputs.
+9. **Prefer prebuilt Vertex AI containers** — optimized CUDA/NCCL.
+10. **Tag with both version and `latest`** — reproducibility plus dev convenience.
+11. **Grant least-privilege IAM** — `roles/aiplatform.user` for jobs, `roles/storage.objectViewer` for read-only data.
 
 ## Anti-Patterns
 
