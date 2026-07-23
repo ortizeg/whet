@@ -1,8 +1,8 @@
-# Pydantic Strict
+# Pydantic
 
-The Pydantic Strict skill enforces rigorous data validation patterns using Pydantic v2, ensuring type safety and validation at runtime boundaries in CV/ML projects.
+The Pydantic skill enforces rigorous data validation patterns using Pydantic v2, ensuring type safety and validation at runtime boundaries in CV/ML projects.
 
-**Skill directory:** `skills/pydantic-strict/`
+**Skill directory:** `skills/pydantic/`
 
 ## Purpose
 
@@ -101,4 +101,4 @@ class PredictionResponse(BaseModel, strict=True):
 
 ## Full Reference
 
-See [`skills/pydantic-strict/SKILL.md`](https://github.com/ortizeg/whet/blob/main/skills/pydantic-strict/SKILL.md) for patterns covering custom validators, serialization, and Pydantic settings for environment variable loading.
+See [`skills/pydantic/SKILL.md`](https://github.com/ortizeg/whet/blob/main/skills/pydantic/SKILL.md) for patterns covering custom validators, serialization, and Pydantic settings for environment variable loading.

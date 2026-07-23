@@ -70,7 +70,7 @@ logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
 
 - **Master Skill** -- loguru is a standard dependency in all generated projects
 - **PyTorch Lightning** -- InterceptHandler routes Lightning logs through loguru
-- **Pydantic Strict** -- LogConfig model for type-safe logging configuration
+- **Pydantic** -- LogConfig model for type-safe logging configuration
 - **Hydra Config** -- logging settings in `configs/logging.yaml`
 
 ## Full Reference

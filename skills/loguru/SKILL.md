@@ -1,9 +1,12 @@
 ---
 name: loguru
 description: >
-  Structured logging for CV/ML projects using Loguru as a mandatory convention.
-  Covers sink configuration, structured JSON logging, log levels, context binding,
-  and replacing stdlib logging and print statements.
+  Use this skill when adding or standardizing logging in a CV/ML project — configuring
+  Loguru sinks, structured JSON logs, log levels, context binding, file rotation, and
+  intercepting stdlib logging. Reach for it any time code has print() statements or
+  stdlib logging calls that should become structured logs, or any time a new module needs
+  a logger, even if the user doesn't say "Loguru" — it is the mandatory logging
+  convention in this project.
 ---
 
 # Loguru Skill
@@ -12,36 +15,15 @@ Structured logging for CV/ML projects using loguru. This is a mandatory project 
 
 ## Why Loguru over stdlib logging
 
-stdlib `logging` requires boilerplate: create a logger, configure handlers, set formatters, propagate correctly. Loguru replaces all of that with a single import and pre-configured defaults.
+stdlib `logging` needs per-module boilerplate (create logger, configure handlers, formatters, propagation). Loguru replaces it with one import and sensible defaults:
 
 ```python
-# ❌ stdlib logging — boilerplate for every module
-import logging
-
-logger = logging.getLogger(__name__)
-handler = logging.StreamHandler()
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.INFO)
-
-logger.info("Training started")
-
-# ✅ loguru — one import, zero setup
 from loguru import logger
 
-logger.info("Training started")
+logger.info("Training started")  # zero setup
 ```
 
-Key advantages for ML projects:
-
-- **Zero configuration** — works immediately with sensible defaults
-- **Structured context binding** — attach epoch, loss, learning rate to all log messages
-- **Better tracebacks** — full variable values in exception traces
-- **Rotation and retention** — built-in file rotation without extra handlers
-- **Serialization** — JSON output for log aggregation with one parameter
-- **Thread and process safe** — correct behavior with DataLoader workers
-- **Lazy evaluation** — `logger.info("Loss: {}", loss)` only formats if the level is active
+Advantages that matter for ML: structured context binding (attach epoch/loss to all messages), tracebacks with full variable values, built-in rotation/retention, JSON serialization for aggregation, thread/process safety with DataLoader workers, and lazy formatting (`logger.info("Loss: {}", loss)` only formats when the level is active).
 
 ## Standard Project Setup
 
@@ -162,7 +144,6 @@ def log_metrics(epoch: int, metrics: dict[str, float]) -> None:
 
 # Usage
 log_metrics(epoch=10, metrics={"loss": 0.0234, "accuracy": 0.9512, "lr": 1e-4})
-# Output: 2025-01-29 12:00:00 | INFO     | train:log_metrics:12 - Epoch 10 metrics: {'loss': '0.0234', 'accuracy': '0.9512', 'lr': '0.0001'}
 ```
 
 ## Log Sinks
@@ -249,34 +230,9 @@ class InterceptHandler(logging.Handler):
         logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
 
-def setup_logging(level: str = "INFO", log_file: str | None = None, serialize: bool = False) -> None:
-    """Configure loguru and intercept stdlib logging."""
-    logger.remove()
-
-    logger.add(
-        sys.stderr,
-        level=level,
-        format=(
-            "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
-            "<level>{level: <8}</level> | "
-            "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
-            "<level>{message}</level>"
-        ),
-        colorize=True,
-    )
-
-    if log_file:
-        logger.add(
-            log_file,
-            level=level,
-            rotation="100 MB",
-            retention="7 days",
-            compression="gz",
-            serialize=serialize,
-        )
-
-    # Intercept all stdlib logging
-    logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
+# In setup_logging(), after configuring your loguru sinks (see Standard Project
+# Setup above), route all stdlib logging through loguru with one line:
+#   logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
 ```
 
 ### Lightning Trainer
@@ -454,34 +410,12 @@ log:
   colorize: true
 ```
 
-```python
-# Apply config
-from loguru import logger
+Then `setup_logging(config: LogConfig)` calls `logger.remove()` and adds the stderr
+(and optional file) sinks using `config.level`, `config.format`, `config.rotation`, etc.
 
-from my_project.config import LogConfig
+## Dependency
 
-
-def setup_logging(config: LogConfig) -> None:
-    logger.remove()
-    logger.add(sys.stderr, level=config.level, format=config.format, colorize=config.colorize)
-    if config.log_file:
-        logger.add(
-            config.log_file,
-            level=config.level,
-            rotation=config.rotation,
-            retention=config.retention,
-            serialize=config.serialize,
-        )
-```
-
-## Integration with pixi
-
-```toml
-# pixi.toml — loguru is a standard project dependency
-[dependencies]
-python = ">=3.11"
-loguru = ">=0.7"
-```
+loguru is a standard project dependency: `pixi add "loguru>=0.7"`.
 
 ## Best Practices
 

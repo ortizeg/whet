@@ -1,5 +1,5 @@
 [skill]
-name = "pydantic-strict"
+name = "pydantic"
 version = "1.0.0"
 category = "core"
 tags = ["validation", "config", "pydantic", "data-models"]

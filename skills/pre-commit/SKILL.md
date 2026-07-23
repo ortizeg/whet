@@ -1,9 +1,12 @@
 ---
 name: pre-commit
 description: >
-  Configure pre-commit hooks for Python and ML projects to enforce code quality
-  at commit time. Covers Ruff, MyPy, YAML validation, large file prevention,
-  secret detection, and CI integration with pre-commit.ci.
+  Use this skill when setting up git pre-commit hooks to enforce quality at commit time —
+  authoring .pre-commit-config.yaml with Ruff, MyPy, YAML validation, large-file blocking,
+  secret detection, and pre-commit.ci integration. Reach for it any time you want checks
+  to run automatically on every commit, even if the user just says "add commit hooks" or
+  "stop bad commits". This skill owns the hook wiring; the Ruff/MyPy standards themselves
+  live in code-quality and the equivalent server-side checks in github-actions.
 ---
 
 # Pre-commit Hooks for Python and ML Projects

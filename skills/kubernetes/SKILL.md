@@ -1,15 +1,18 @@
 ---
 name: kubernetes
 description: >
-  Kubernetes deployment patterns for ML inference and training services. Covers
-  GPU resource scheduling, Helm charts, Kustomize overlays, health probes,
-  autoscaling, persistent volumes for model storage, and namespace organization
-  for dev/staging/prod environments.
+  Use this skill when deploying ML inference or training services to Kubernetes —
+  Deployments, GPU scheduling, Services and Ingress, HPA autoscaling, ConfigMaps and
+  Secrets, persistent volumes for model storage, health probes, Helm charts, and
+  Kustomize overlays for dev/staging/prod. Reach for it any time you'd otherwise hand-write
+  k8s manifests or a Helm chart for a model server, even if the user just says "deploy the
+  model to the cluster" or "scale up the endpoint". For building the container image the
+  cluster runs, see docker-cv.
 ---
 
 # Kubernetes Skill
 
-Kubernetes deployment patterns for ML inference and training services with GPU scheduling, Helm charts, autoscaling, and environment-specific overlays.
+Deployment patterns for ML inference and training services: GPU scheduling, Helm charts, autoscaling, and environment-specific overlays.
 
 ## Deployment Manifests for ML Services
 
@@ -44,99 +47,60 @@ spec:
             - containerPort: 8000
               name: http
           resources:
-            requests:
-              cpu: "2"
-              memory: "4Gi"
-              nvidia.com/gpu: "1"
-            limits:
-              cpu: "4"
-              memory: "8Gi"
-              nvidia.com/gpu: "1"
+            requests: { cpu: "2", memory: "4Gi", nvidia.com/gpu: "1" }
+            limits: { cpu: "4", memory: "8Gi", nvidia.com/gpu: "1" }
           envFrom:
-            - configMapRef:
-                name: model-config
-            - secretRef:
-                name: model-secrets
+            - configMapRef: { name: model-config }
+            - secretRef: { name: model-secrets }
           volumeMounts:
-            - name: model-storage
-              mountPath: /models
-              readOnly: true
+            - { name: model-storage, mountPath: /models, readOnly: true }
           livenessProbe:
-            httpGet:
-              path: /health
-              port: http
+            httpGet: { path: /health, port: http }
             initialDelaySeconds: 30
             periodSeconds: 15
-            timeoutSeconds: 5
             failureThreshold: 3
           readinessProbe:
-            httpGet:
-              path: /health/ready
-              port: http
+            httpGet: { path: /health/ready, port: http }
             initialDelaySeconds: 60
             periodSeconds: 10
-            timeoutSeconds: 5
             failureThreshold: 5
-          startupProbe:
-            httpGet:
-              path: /health
-              port: http
+          startupProbe:  # allows ~5 min for model load
+            httpGet: { path: /health, port: http }
             initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 30
       volumes:
         - name: model-storage
-          persistentVolumeClaim:
-            claimName: model-pvc
+          persistentVolumeClaim: { claimName: model-pvc }
       tolerations:
-        - key: nvidia.com/gpu
-          operator: Exists
-          effect: NoSchedule
+        - { key: nvidia.com/gpu, operator: Exists, effect: NoSchedule }
       nodeSelector:
         cloud.google.com/gke-accelerator: nvidia-tesla-t4
 ```
 
 ## GPU Resource Requests
 
-Always set both `requests` and `limits` for `nvidia.com/gpu`. Kubernetes GPU scheduling requires exact counts -- fractional GPUs are not natively supported.
+Always set both `requests` and `limits` for `nvidia.com/gpu`, and they must be equal — GPU scheduling requires exact counts (fractional GPUs are not natively supported). Multi-GPU pods just raise the count alongside CPU/memory:
 
 ```yaml
-# GPU resource patterns
 resources:
-  requests:
-    nvidia.com/gpu: "1"   # Request exactly 1 GPU
-  limits:
-    nvidia.com/gpu: "1"   # Must equal requests for GPUs
-
-# Multi-GPU training pod
-resources:
-  requests:
-    cpu: "8"
-    memory: "32Gi"
-    nvidia.com/gpu: "4"
-  limits:
-    cpu: "16"
-    memory: "64Gi"
-    nvidia.com/gpu: "4"
+  requests: { cpu: "8", memory: "32Gi", nvidia.com/gpu: "4" }
+  limits: { cpu: "16", memory: "64Gi", nvidia.com/gpu: "4" }
 ```
 
 ### NVIDIA Device Plugin
 
-The NVIDIA device plugin must be deployed in the cluster to enable GPU scheduling.
+GPU scheduling requires the NVIDIA device plugin deployed in-cluster:
 
 ```bash
-# Install the NVIDIA device plugin via Helm
-helm repo add nvdp https://nvidia.github.io/k8s-device-plugin
-helm repo update
-
+helm repo add nvdp https://nvidia.github.io/k8s-device-plugin && helm repo update
 helm install nvidia-device-plugin nvdp/nvidia-device-plugin \
-    --namespace kube-system \
-    --set runtimeClassName=nvidia
+    --namespace kube-system --set runtimeClassName=nvidia
 ```
 
 ## Service and Ingress Configuration
 
-### Service
+A `ClusterIP` Service exposes the pods internally:
 
 ```yaml
 # k8s/base/service.yaml
@@ -144,20 +108,17 @@ apiVersion: v1
 kind: Service
 metadata:
   name: model-server
-  labels:
-    app: model-server
 spec:
   type: ClusterIP
   ports:
-    - port: 80
-      targetPort: http
-      protocol: TCP
-      name: http
+    - { port: 80, targetPort: http, protocol: TCP, name: http }
   selector:
     app: model-server
 ```
 
 ### Ingress
+
+TLS-terminated Ingress (nginx + cert-manager); raise `proxy-body-size` for large image uploads:
 
 ```yaml
 # k8s/base/ingress.yaml
@@ -172,8 +133,7 @@ metadata:
 spec:
   ingressClassName: nginx
   tls:
-    - hosts:
-        - api.ml.example.com
+    - hosts: [api.ml.example.com]
       secretName: model-server-tls
   rules:
     - host: api.ml.example.com
@@ -184,8 +144,7 @@ spec:
             backend:
               service:
                 name: model-server
-                port:
-                  name: http
+                port: { name: http }
 ```
 
 ## Horizontal Pod Autoscaler
@@ -205,33 +164,21 @@ spec:
     name: model-server
   minReplicas: 2
   maxReplicas: 10
-  behavior:
+  behavior:  # scale up fast (60s window), down slow (300s window) to avoid flapping
     scaleUp:
       stabilizationWindowSeconds: 60
-      policies:
-        - type: Pods
-          value: 2
-          periodSeconds: 60
+      policies: [{ type: Pods, value: 2, periodSeconds: 60 }]
     scaleDown:
       stabilizationWindowSeconds: 300
-      policies:
-        - type: Pods
-          value: 1
-          periodSeconds: 120
-  metrics:
+      policies: [{ type: Pods, value: 1, periodSeconds: 120 }]
+  metrics:  # add a matching memory Resource metric (averageUtilization: 80) as needed
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
           averageUtilization: 70
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 80
-    - type: Pods
+    - type: Pods  # custom metric — scale on request rate, not just CPU
       pods:
         metric:
           name: inference_requests_per_second
@@ -252,7 +199,6 @@ metadata:
   name: model-config
 data:
   MODEL_NAME: "resnet50"
-  MODEL_VERSION: "v1.2.0"
   MODEL_PATH: "/models/resnet50_v1.2.0.onnx"
   BATCH_SIZE: "8"
   NUM_WORKERS: "4"
@@ -262,25 +208,12 @@ data:
 
 ### Secret
 
-```yaml
-# k8s/base/secret.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: model-secrets
-type: Opaque
-stringData:
-  WANDB_API_KEY: ""         # Populated via Kustomize or sealed-secrets
-  S3_ACCESS_KEY: ""
-  S3_SECRET_KEY: ""
-```
+Never commit plaintext secrets to a `Secret` manifest — create them at deploy time (or use sealed-secrets):
 
 ```bash
-# Create secrets from command line (never commit plaintext secrets)
 kubectl create secret generic model-secrets \
     --from-literal=WANDB_API_KEY="${WANDB_API_KEY}" \
     --from-literal=S3_ACCESS_KEY="${S3_ACCESS_KEY}" \
-    --from-literal=S3_SECRET_KEY="${S3_SECRET_KEY}" \
     --namespace=ml-inference
 ```
 
@@ -295,8 +228,7 @@ kind: PersistentVolumeClaim
 metadata:
   name: model-pvc
 spec:
-  accessModes:
-    - ReadOnlyMany
+  accessModes: [ReadOnlyMany]  # many pods mount read-only; use ReadWriteOnce for checkpoints
   storageClassName: standard
   resources:
     requests:
@@ -306,56 +238,26 @@ spec:
 ### Init Container to Download Models
 
 ```yaml
-# Use an init container to pull model weights before the main container starts
 spec:
   initContainers:
     - name: model-downloader
       image: google/cloud-sdk:slim
-      command:
-        - gsutil
-        - cp
-        - gs://my-ml-bucket/models/resnet50_v1.2.0.onnx
-        - /models/resnet50_v1.2.0.onnx
+      command: ["gsutil", "cp", "gs://my-ml-bucket/models/resnet50.onnx", "/models/resnet50.onnx"]
       volumeMounts:
-        - name: model-storage
-          mountPath: /models
+        - { name: model-storage, mountPath: /models }
   containers:
     - name: model-server
       image: registry.example.com/ml-images/inference:v1.2.0
       volumeMounts:
-        - name: model-storage
-          mountPath: /models
-          readOnly: true
+        - { name: model-storage, mountPath: /models, readOnly: true }
   volumes:
     - name: model-storage
-      emptyDir:
-        sizeLimit: 50Gi
+      emptyDir: { sizeLimit: 50Gi }
 ```
 
 ## Helm Chart Patterns
 
-Organize Kubernetes manifests into a Helm chart for templated, reusable deployments.
-
-### Chart Structure
-
-```
-helm/model-server/
-├── Chart.yaml
-├── values.yaml
-├── values-dev.yaml
-├── values-staging.yaml
-├── values-prod.yaml
-└── templates/
-    ├── _helpers.tpl
-    ├── deployment.yaml
-    ├── service.yaml
-    ├── ingress.yaml
-    ├── hpa.yaml
-    ├── configmap.yaml
-    ├── secret.yaml
-    ├── pvc.yaml
-    └── NOTES.txt
-```
+Organize manifests into a Helm chart (`helm/model-server/`) with `Chart.yaml`, a base `values.yaml` plus per-env `values-{dev,staging,prod}.yaml`, and a `templates/` dir holding templated copies of each manifest (deployment, service, ingress, hpa, configmap, secret, pvc) plus `_helpers.tpl` and `NOTES.txt`.
 
 ### values.yaml
 
@@ -375,14 +277,8 @@ model:
   storageSizeGi: 50
 
 resources:
-  requests:
-    cpu: "2"
-    memory: "4Gi"
-    nvidia.com/gpu: "1"
-  limits:
-    cpu: "4"
-    memory: "8Gi"
-    nvidia.com/gpu: "1"
+  requests: { cpu: "2", memory: "4Gi", nvidia.com/gpu: "1" }
+  limits: { cpu: "4", memory: "8Gi", nvidia.com/gpu: "1" }
 
 autoscaling:
   enabled: true
@@ -395,106 +291,50 @@ ingress:
   host: api.ml.example.com
   tls: true
 
-probes:
-  liveness:
-    path: /health
-    initialDelaySeconds: 30
-    periodSeconds: 15
-  readiness:
-    path: /health/ready
-    initialDelaySeconds: 60
-    periodSeconds: 10
-  startup:
-    path: /health
-    initialDelaySeconds: 10
-    failureThreshold: 30
+# probes: liveness/readiness/startup paths + timings (see Deployment manifest)
 
 nodeSelector:
   cloud.google.com/gke-accelerator: nvidia-tesla-t4
 
 tolerations:
-  - key: nvidia.com/gpu
-    operator: Exists
-    effect: NoSchedule
+  - { key: nvidia.com/gpu, operator: Exists, effect: NoSchedule }
 ```
 
 ### Helm Deployment Commands
 
 ```bash
-# Install the chart
 helm install model-server ./helm/model-server \
-    --namespace ml-inference \
-    --create-namespace \
+    --namespace ml-inference --create-namespace \
     --values helm/model-server/values-prod.yaml
 
-# Upgrade with new image tag
-helm upgrade model-server ./helm/model-server \
-    --namespace ml-inference \
-    --set image.tag=v1.3.0
-
-# Rollback to previous release
+helm upgrade model-server ./helm/model-server --set image.tag=v1.3.0
 helm rollback model-server 1 --namespace ml-inference
-
-# Dry-run to preview rendered templates
 helm template model-server ./helm/model-server \
-    --values helm/model-server/values-staging.yaml \
-    --debug
+    --values helm/model-server/values-staging.yaml --debug  # preview
 ```
 
 ## Health Checks (Liveness, Readiness, and Startup Probes)
 
-ML containers need long startup times for model loading. Use all three probe types.
-
-```yaml
-# Startup probe: allow up to 5 minutes for model loading (10s * 30 attempts)
-startupProbe:
-  httpGet:
-    path: /health
-    port: 8000
-  initialDelaySeconds: 10
-  periodSeconds: 10
-  failureThreshold: 30
-
-# Liveness probe: restart if unresponsive
-livenessProbe:
-  httpGet:
-    path: /health
-    port: 8000
-  initialDelaySeconds: 0
-  periodSeconds: 15
-  timeoutSeconds: 5
-  failureThreshold: 3
-
-# Readiness probe: remove from service if not ready
-readinessProbe:
-  httpGet:
-    path: /health/ready
-    port: 8000
-  initialDelaySeconds: 0
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 5
-```
+ML containers need long startup times for model loading, so use all three probe types (see the Deployment manifest above for the full YAML): a `startupProbe` (`failureThreshold: 30`, `periodSeconds: 10` allows ~5 min to load), a `livenessProbe` to restart hung processes, and a `readinessProbe` on `/health/ready` to gate traffic until the model is loaded.
 
 ### FastAPI Health Endpoints
+
+`/health` (liveness) returns alive as soon as the process is up; `/health/ready` (readiness) must return 503 until the model is loaded so traffic is not routed early:
 
 ```python
 from fastapi import FastAPI, Response, status
 
 app = FastAPI()
-
 model_loaded = False
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    """Liveness probe -- is the process alive?"""
     return {"status": "alive"}
 
 
 @app.get("/health/ready")
 def readiness(response: Response) -> dict[str, str]:
-    """Readiness probe -- is the model loaded and ready for inference?"""
     if not model_loaded:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {"status": "not_ready", "reason": "model loading"}
@@ -503,17 +343,7 @@ def readiness(response: Response) -> dict[str, str]:
 
 ## Namespace Organization
 
-Separate environments and workload types using namespaces with resource quotas.
-
-```bash
-# Create namespaces for each environment
-kubectl create namespace ml-dev
-kubectl create namespace ml-staging
-kubectl create namespace ml-prod
-
-# Create namespace for training jobs
-kubectl create namespace ml-training
-```
+Separate environments and workload types using namespaces (`ml-dev`, `ml-staging`, `ml-prod`, `ml-training`) via `kubectl create namespace <name>`, each with a resource quota.
 
 ### Resource Quotas per Namespace
 
@@ -535,36 +365,7 @@ spec:
 
 ## Kustomize Overlays for Dev/Staging/Prod
 
-Use Kustomize to manage environment-specific variations without duplicating manifests.
-
-### Directory Structure
-
-```
-k8s/
-├── base/
-│   ├── kustomization.yaml
-│   ├── deployment.yaml
-│   ├── service.yaml
-│   ├── ingress.yaml
-│   ├── hpa.yaml
-│   ├── configmap.yaml
-│   └── pvc.yaml
-└── overlays/
-    ├── dev/
-    │   ├── kustomization.yaml
-    │   └── patches/
-    │       ├── deployment-patch.yaml
-    │       └── hpa-patch.yaml
-    ├── staging/
-    │   ├── kustomization.yaml
-    │   └── patches/
-    │       └── deployment-patch.yaml
-    └── prod/
-        ├── kustomization.yaml
-        └── patches/
-            ├── deployment-patch.yaml
-            └── hpa-patch.yaml
-```
+Use Kustomize to manage environment-specific variations without duplicating manifests. Layout: `k8s/base/` holds the shared manifests plus a `kustomization.yaml`; `k8s/overlays/{dev,staging,prod}/` each hold a `kustomization.yaml` and a `patches/` directory.
 
 ### Base Kustomization
 
@@ -572,19 +373,15 @@ k8s/
 # k8s/base/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-resources:
-  - deployment.yaml
-  - service.yaml
-  - ingress.yaml
-  - hpa.yaml
-  - configmap.yaml
-  - pvc.yaml
+resources: [deployment.yaml, service.yaml, ingress.yaml, hpa.yaml, configmap.yaml, pvc.yaml]
 commonLabels:
   app.kubernetes.io/name: model-server
   app.kubernetes.io/managed-by: kustomize
 ```
 
-### Dev Overlay
+### Overlay Example
+
+Each overlay references `../../base`, sets a `namespace`, pins the image `newTag`, and applies patches. Only the patch values differ per environment.
 
 ```yaml
 # k8s/overlays/dev/kustomization.yaml
@@ -614,81 +411,15 @@ spec:
       containers:
         - name: model-server
           resources:
-            requests:
-              cpu: "1"
-              memory: "2Gi"
-              nvidia.com/gpu: "1"
-            limits:
-              cpu: "2"
-              memory: "4Gi"
-              nvidia.com/gpu: "1"
+            requests: { cpu: "1", memory: "2Gi", nvidia.com/gpu: "1" }
+            limits: { cpu: "2", memory: "4Gi", nvidia.com/gpu: "1" }
 ```
 
-```yaml
-# k8s/overlays/dev/patches/hpa-patch.yaml
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: model-server
-spec:
-  minReplicas: 1
-  maxReplicas: 2
-```
-
-### Prod Overlay
-
-```yaml
-# k8s/overlays/prod/kustomization.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-namespace: ml-prod
-resources:
-  - ../../base
-patches:
-  - path: patches/deployment-patch.yaml
-  - path: patches/hpa-patch.yaml
-images:
-  - name: registry.example.com/ml-images/inference
-    newTag: v1.2.0
-```
-
-```yaml
-# k8s/overlays/prod/patches/deployment-patch.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: model-server
-spec:
-  replicas: 3
-  template:
-    spec:
-      containers:
-        - name: model-server
-          resources:
-            requests:
-              cpu: "4"
-              memory: "8Gi"
-              nvidia.com/gpu: "1"
-            limits:
-              cpu: "8"
-              memory: "16Gi"
-              nvidia.com/gpu: "1"
-```
-
-### Apply Overlays
+The `hpa-patch.yaml` in the same overlay just overrides `minReplicas`/`maxReplicas` (e.g. `1`/`2` for dev). Staging and prod use the same structure with scaled-up values: prod pins a real version tag (e.g. `newTag: v1.2.0`), sets `namespace: ml-prod`, `replicas: 3`, and larger CPU/memory requests (e.g. `cpu: "4"`, `memory: "8Gi"`) with `minReplicas` raised accordingly.
 
 ```bash
-# Apply dev overlay
-kubectl apply -k k8s/overlays/dev/
-
-# Apply staging overlay
-kubectl apply -k k8s/overlays/staging/
-
-# Apply prod overlay
-kubectl apply -k k8s/overlays/prod/
-
-# Preview rendered manifests without applying
-kubectl kustomize k8s/overlays/prod/
+kubectl apply -k k8s/overlays/dev/        # or staging/ , prod/
+kubectl kustomize k8s/overlays/prod/       # preview rendered manifests without applying
 ```
 
 ## Training Jobs with Kubernetes
@@ -712,35 +443,20 @@ spec:
         - name: trainer
           image: registry.example.com/ml-images/training:v1.2.0
           command: ["python", "-m", "my_project.train"]
-          args:
-            - "--config=configs/train.yaml"
-            - "--epochs=100"
-            - "--batch-size=32"
+          args: ["--config=configs/train.yaml", "--epochs=100"]
           resources:
-            requests:
-              cpu: "8"
-              memory: "32Gi"
-              nvidia.com/gpu: "4"
-            limits:
-              cpu: "16"
-              memory: "64Gi"
-              nvidia.com/gpu: "4"
+            requests: { cpu: "8", memory: "32Gi", nvidia.com/gpu: "4" }
+            limits: { cpu: "16", memory: "64Gi", nvidia.com/gpu: "4" }
           volumeMounts:
-            - name: data
-              mountPath: /data
-              readOnly: true
-            - name: checkpoints
-              mountPath: /checkpoints
+            - { name: data, mountPath: /data, readOnly: true }
+            - { name: checkpoints, mountPath: /checkpoints }
           envFrom:
-            - secretRef:
-                name: training-secrets
+            - secretRef: { name: training-secrets }
       volumes:
         - name: data
-          persistentVolumeClaim:
-            claimName: training-data-pvc
+          persistentVolumeClaim: { claimName: training-data-pvc }
         - name: checkpoints
-          persistentVolumeClaim:
-            claimName: checkpoints-pvc
+          persistentVolumeClaim: { claimName: checkpoints-pvc }
       tolerations:
         - key: nvidia.com/gpu
           operator: Exists
@@ -764,13 +480,4 @@ spec:
 
 ## Best Practices
 
-1. **Always set resource requests and limits** -- GPU, CPU, and memory must all be specified for predictable scheduling.
-2. **Use startup probes** -- ML containers need extended initialization time; startup probes prevent premature restarts.
-3. **Separate namespaces by environment** -- dev, staging, and prod with resource quotas per namespace.
-4. **Use Kustomize or Helm for environment management** -- never duplicate YAML across environments.
-5. **Pin image tags** -- use semantic versions or Git SHAs, never `latest` in staging or prod.
-6. **Run as non-root** -- set `securityContext.runAsNonRoot: true` on all pods.
-7. **Use PVCs for model storage** -- decouple model weights from container images.
-8. **Set pod disruption budgets** -- ensure minimum availability during cluster maintenance.
-9. **Configure HPA with appropriate metrics** -- scale on request rate or GPU utilization, not just CPU.
-10. **Use init containers for model downloads** -- pull weights from object storage before the main container starts.
+The positive form of the anti-patterns above: always set GPU/CPU/memory requests and limits; use all three probe types; separate environments by namespace with resource quotas; manage env differences with Kustomize/Helm (never duplicated YAML); pin image tags; run as non-root; store model weights on PVCs (not in images); set pod disruption budgets; scale HPA on request rate or GPU utilization; and pull weights via init containers.

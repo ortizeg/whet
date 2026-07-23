@@ -23,7 +23,7 @@ The Expert Coder reads the relevant skill files and generates code following all
 You: "Create a DataModule for COCO object detection"
 
 Expert Coder:
-1. Reads pytorch-lightning, pydantic-strict, abstraction-patterns skills
+1. Reads pytorch-lightning, pydantic, abstraction-patterns skills
 2. Creates DataConfig with Pydantic validation
 3. Implements LightningDataModule with proper hooks
 4. Wraps data loading in abstractions
@@ -61,4 +61,4 @@ cap = cv2.VideoCapture("video.mp4")  # Direct library use
 
 ## Related Skills
 
-The Expert Coder reads: `pydantic-strict`, `abstraction-patterns`, `code-quality`, `pytorch-lightning`, and others as needed.
+The Expert Coder reads: `pydantic`, `abstraction-patterns`, `code-quality`, `pytorch-lightning`, and others as needed.

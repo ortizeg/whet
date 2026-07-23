@@ -933,7 +933,7 @@ def get_migration_path(from_version: str, to_version: str) -> list[tuple[str, st
 ## Integration with Other Skills
 
 - **DVC** — Data versioning and pipeline reproducibility for tracking dataset lineage.
-- **Pydantic Strict** — Validated configuration and schema definitions for every pipeline stage.
+- **Pydantic** — Validated configuration and schema definitions for every pipeline stage.
 - **Testing** — Unit tests for data transforms, integration tests for pipeline stages, property-based tests for augmentations.
 - **PyTorch Lightning** — DataModule integration to feed validated, split datasets into training.
 - **Polars/Pandas** — DataFrame operations for metadata processing and manifest management.

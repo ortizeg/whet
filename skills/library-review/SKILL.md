@@ -1,30 +1,17 @@
 ---
 name: library-review
 description: >
-  Structured framework for evaluating third-party Python libraries before adoption.
-  Covers technology radar classification (Adopt/Trial/Assess/Hold), dependency risk
-  assessment, API wrapping strategies, and security review checklists.
+  Use this skill when deciding whether to adopt a third-party Python library — evaluating
+  maintenance, community, docs, type-hint support, license compatibility, security
+  history, and performance, then classifying it Adopt/Trial/Assess/Hold. Reach for it any
+  time you'd otherwise add a dependency on gut feel or wonder "is this package safe and
+  maintained enough to depend on?", even if the user doesn't say "library review". For
+  designing wrappers around a library once adopted, see abstraction-patterns.
 ---
 
 # Library Review and Evaluation Framework
 
-## Overview
-
-Adopting a new third-party library is a long-term commitment. Every dependency added to a project increases the attack surface, maintenance burden, and potential for breaking changes. This skill provides a structured framework for evaluating new libraries before adopting them, ensuring that every dependency earns its place in the project. The framework applies a technology radar approach (Adopt / Trial / Assess / Hold) combined with a wrapping strategy that isolates third-party APIs behind project-owned interfaces.
-
-## Why Evaluate Libraries
-
-The cost of a bad dependency is far higher than the cost of evaluating it upfront:
-
-- **Security vulnerabilities** in dependencies can compromise the entire project.
-- **Abandoned libraries** stop receiving bug fixes and compatibility updates.
-- **Breaking changes** in major version updates can require significant refactoring.
-- **License conflicts** can create legal issues for commercial projects.
-- **Performance problems** may only become apparent under production load.
-- **Poor type support** undermines the project's static analysis guarantees.
-- **Transitive dependencies** bring in additional risk with every library added.
-
-A structured evaluation process prevents these problems before they occur.
+Every dependency is a long-term commitment carrying security, maintenance, breaking-change, license, and transitive-dependency risk. Evaluate new libraries before adoption using a technology radar (Adopt / Trial / Assess / Hold) plus a wrapping strategy that isolates third-party APIs behind project-owned interfaces.
 
 ## Evaluation Criteria Checklist
 
@@ -187,7 +174,7 @@ Verify the library works with your existing tools and dependencies.
 | Does it conflict with existing dependencies? | Run `pip check` after install |
 | Does it support your OS/platform? | Check CI matrix and platform wheels |
 | Does it integrate with PyTorch/Lightning? | Check for official integrations |
-| Can it be installed with pixi/conda? | Check conda-forge availability |
+| Can it be installed with uv/conda? | Check PyPI and conda-forge availability |
 
 ```bash
 # Check for dependency conflicts
@@ -255,26 +242,16 @@ Always wrap third-party APIs behind project-owned interfaces. This isolates the 
 
 ### Why Wrap
 
-```python
-# BAD: Direct usage scattered throughout codebase
-# If the library changes its API, every file must be updated
-import some_library
-result = some_library.process(image, mode="fast", threshold=0.5)
-```
+Direct calls scattered across files (`some_library.process(...)`) mean every file
+changes when the library's API changes. Wrapped behind a Protocol, only the wrapper
+updates:
 
 ```python
-# GOOD: Wrapped behind a project interface
-# Only the wrapper needs updating if the library changes
-
-# src/processing/interface.py
 from typing import Protocol
 
 class ImageProcessor(Protocol):
     """Interface for image processing."""
     def process(self, image: np.ndarray, threshold: float = 0.5) -> np.ndarray: ...
-
-# src/processing/some_library_processor.py
-import some_library
 
 class SomeLibraryProcessor:
     """Image processor using some_library."""
@@ -335,30 +312,8 @@ class WandbTracker(ExperimentTracker):
         wandb.finish()
 
 
-class MLflowTracker(ExperimentTracker):
-    """MLflow implementation of experiment tracker."""
-
-    def __init__(self, experiment_name: str, config: dict[str, Any]) -> None:
-        import mlflow
-        mlflow.set_experiment(experiment_name)
-        self.run = mlflow.start_run()
-        mlflow.log_params(config)
-
-    def log_metric(self, name: str, value: float, step: int) -> None:
-        import mlflow
-        mlflow.log_metric(name, value, step=step)
-
-    def log_params(self, params: dict[str, Any]) -> None:
-        import mlflow
-        mlflow.log_params(params)
-
-    def log_artifact(self, path: str) -> None:
-        import mlflow
-        mlflow.log_artifact(path)
-
-    def finish(self) -> None:
-        import mlflow
-        mlflow.end_run()
+# An MLflowTracker implements the same four methods against mlflow.log_metric /
+# log_params / log_artifact / end_run — swapping the backend is a wrapper-only change.
 
 
 class NullTracker(ExperimentTracker):
@@ -419,30 +374,13 @@ Use this template when proposing a new dependency:
 ### Alternatives Considered
 | Library | Pros | Cons |
 |---------|------|------|
-| [Alternative 1] | ... | ... |
-| [Alternative 2] | ... | ... |
 
 ### Evaluation Checklist
-- [ ] Maintenance: Last commit within 3 months
-- [ ] Maintenance: Last release within 6 months
-- [ ] Community: > 100 GitHub stars
-- [ ] Community: > 5 contributors
-- [ ] Documentation: API reference complete
-- [ ] Documentation: Tutorials/examples available
-- [ ] Types: py.typed marker or stubs available
-- [ ] Types: Passes MyPy strict mode
-- [ ] License: Compatible with project license
-- [ ] Security: No known CVEs
-- [ ] Security: pip-audit clean
-- [ ] Performance: Benchmarked against alternatives
-- [ ] Integration: No dependency conflicts
-- [ ] Integration: Available on conda-forge
+Score each criterion above (maintenance, community, docs, types, license,
+security, performance, integration) green/yellow/red.
 
 ### Decision
-- [ ] Adopt
-- [ ] Trial
-- [ ] Assess
-- [ ] Hold
+- [ ] Adopt  - [ ] Trial  - [ ] Assess  - [ ] Hold
 
 ### Wrapping Plan
 [How will this library be wrapped behind a project interface?]
@@ -510,6 +448,3 @@ pipdeptree --warn silence | grep -E "^\w"
 9. **Track the Technology Radar**: Maintain a team document classifying all dependencies.
 10. **Plan for migration**: Assume every library will eventually need to be replaced.
 
-## Summary
-
-Library evaluation is a discipline that pays dividends over the lifetime of a project. By applying a structured checklist, using a decision framework, wrapping third-party APIs, and maintaining regular review cycles, teams avoid the common pitfalls of dependency management. The investment of an hour evaluating a library before adoption can save weeks of emergency migration when a dependency is abandoned, compromised, or introduces breaking changes.

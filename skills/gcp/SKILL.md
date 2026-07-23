@@ -1,9 +1,12 @@
 ---
 name: gcp
 description: >
-  Google Cloud Platform services for CV/ML projects. Covers Artifact Registry for
-  Docker images, Cloud Storage for datasets, Vertex AI for training jobs, and
-  gcloud CLI patterns for infrastructure management.
+  Use this skill when working with Google Cloud infrastructure for CV/ML — pushing
+  images to Artifact Registry, storing datasets and checkpoints in Cloud Storage (gsutil,
+  gcsfuse, the Python client), and provisioning with the gcloud CLI. Reach for it any
+  time the project touches GCP buckets, registries, or gcloud commands, even if the user
+  doesn't name the specific service — including submitting Vertex AI custom training jobs
+  and retrieving their artifacts. For the AWS equivalent see aws-sagemaker.
 ---
 
 # GCP Skill
@@ -12,7 +15,7 @@ Google Cloud Platform services for CV/ML projects: Artifact Registry, Cloud Stor
 
 ## Artifact Registry
 
-Use Artifact Registry for Docker images and Python packages. It replaces the deprecated Container Registry.
+Use Artifact Registry (replaces the deprecated Container Registry) for Docker images and Python packages.
 
 ### Create a Docker Repository
 
@@ -46,27 +49,14 @@ docker pull us-central1-docker.pkg.dev/my-project/ml-images/training:v1.2.0
 ### Python Package Repository
 
 ```bash
-# Create a Python repository
 gcloud artifacts repositories create ml-packages \
-    --repository-format=python \
-    --location=us-central1
+    --repository-format=python --location=us-central1
 
-# Configure pip to pull from Artifact Registry
-gcloud artifacts print-settings python \
-    --repository=ml-packages \
-    --location=us-central1
+# Print pip/uv index settings for the repo
+gcloud artifacts print-settings python --repository=ml-packages --location=us-central1
 ```
 
-```python
-# pixi.toml — add Artifact Registry as extra index
-# [project]
-# name = "my-cv-project"
-#
-# [tool.pixi.pypi-options]
-# extra-index-urls = [
-#     "https://us-central1-python.pkg.dev/my-project/ml-packages/simple/"
-# ]
-```
+Add the printed index to `pyproject.toml` under `[tool.uv]` as an `extra-index-url` (e.g. `https://us-central1-python.pkg.dev/my-project/ml-packages/simple/`).
 
 ## Cloud Storage
 
@@ -215,20 +205,29 @@ model = job.run(
 
 ### Prebuilt Training Containers
 
-```python
-# Use Google's prebuilt PyTorch containers instead of custom images
-PYTORCH_GPU_CONTAINER = "us-docker.pkg.dev/vertex-ai/training/pytorch-gpu.2-3:latest"
+Skip building a custom image: pass a Google prebuilt container (e.g. `us-docker.pkg.dev/vertex-ai/training/pytorch-gpu.2-3:latest`) as `container_uri` to `from_local_script`, plus `requirements=["torchvision", "albumentations", ...]` for extra deps.
 
-job = aiplatform.CustomJob.from_local_script(
-    display_name="detection-train",
-    script_path="src/train.py",
-    container_uri=PYTORCH_GPU_CONTAINER,
-    requirements=["torchvision", "albumentations", "pycocotools"],
-    args=["--epochs=100", "--batch-size=32"],
-    machine_type="n1-standard-8",
-    accelerator_type="NVIDIA_TESLA_T4",
-    accelerator_count=1,
-)
+### Retrieving Artifacts After Training
+
+**The training VM is ephemeral — anything not written to GCS is gone when the job ends.**
+Write checkpoints and exports to the GCS path Vertex provides (`AIP_MODEL_DIR`), then pull
+them down explicitly once the job finishes. Do not assume the job "left them somewhere".
+
+```python
+import os
+
+# Inside the training container: write to the GCS path Vertex provides.
+# Falls back to a local dir so the same script runs off-cloud unchanged.
+model_dir = os.environ.get("AIP_MODEL_DIR", "outputs/model")
+trainer.save_checkpoint(f"{model_dir}/best.ckpt")
+```
+
+```bash
+# After the job completes: sync every artifact to the local machine.
+gcloud storage rsync -r "gs://my-bucket/jobs/${JOB_ID}/model" ./artifacts/
+
+# Verify before deleting anything remote.
+ls -lh ./artifacts/
 ```
 
 ## Docker Image Management
@@ -260,61 +259,37 @@ docker push "${FULL_URI}"
 ### Multi-Stage for Training and Inference
 
 ```dockerfile
-# ==============================================================================
-# Base stage — shared between training and inference
-# ==============================================================================
 FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04 AS base
-
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
+ENV DEBIAN_FRONTEND=noninteractive PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1-mesa-glx libglib2.0-0 curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# ==============================================================================
-# Training stage — full environment with dev tools
-# ==============================================================================
-FROM base AS training
-
+    libgl1-mesa-glx libglib2.0-0 curl && rm -rf /var/lib/apt/lists/*
 RUN curl -fsSL https://pixi.sh/install.sh | bash
 ENV PATH="/root/.pixi/bin:${PATH}"
 
+# Training — full environment with dev tools
+FROM base AS training
 WORKDIR /app
 COPY pixi.toml pixi.lock ./
-RUN pixi install --frozen
-
-COPY pyproject.toml ./
+RUN pixi install
 COPY src/ src/
 COPY configs/ configs/
-
-RUN pixi run pip install -e ".[dev]"
 RUN useradd -m -u 1000 trainer
 USER trainer
-
 ENTRYPOINT ["pixi", "run", "python", "-m"]
 CMD ["my_project.train"]
 
-# ==============================================================================
-# Inference stage — minimal runtime
-# ==============================================================================
+# Inference — minimal runtime
 FROM base AS inference
-
 WORKDIR /app
-COPY requirements-inference.txt ./
-RUN pip install --no-cache-dir -r requirements-inference.txt
-
+COPY pixi.toml pixi.lock ./
+RUN pixi install
 COPY src/ src/
-
 RUN useradd -m -u 1000 appuser
 USER appuser
-
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
-
 EXPOSE 8000
-CMD ["uvicorn", "src.serve:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["pixi", "run", "uvicorn", "src.serve:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 ### GitHub Actions: Build and Push to Artifact Registry
@@ -371,20 +346,12 @@ jobs:
 gcloud iam service-accounts create ml-trainer \
     --display-name="ML Training Service Account"
 
-# Grant required roles
+# Grant required roles (least privilege)
 SA_EMAIL="ml-trainer@my-project.iam.gserviceaccount.com"
-
-gcloud projects add-iam-policy-binding my-project \
-    --member="serviceAccount:${SA_EMAIL}" \
-    --role="roles/aiplatform.user"
-
-gcloud projects add-iam-policy-binding my-project \
-    --member="serviceAccount:${SA_EMAIL}" \
-    --role="roles/storage.objectAdmin"
-
-gcloud projects add-iam-policy-binding my-project \
-    --member="serviceAccount:${SA_EMAIL}" \
-    --role="roles/artifactregistry.reader"
+for ROLE in aiplatform.user storage.objectAdmin artifactregistry.reader; do
+    gcloud projects add-iam-policy-binding my-project \
+        --member="serviceAccount:${SA_EMAIL}" --role="roles/${ROLE}"
+done
 ```
 
 ### Workload Identity Federation for CI
@@ -411,32 +378,23 @@ gcloud iam service-accounts add-iam-policy-binding "${SA_EMAIL}" \
 ### Docker Authentication
 
 ```bash
-# ✅ Configure Docker to authenticate with Artifact Registry
-gcloud auth configure-docker us-central1-docker.pkg.dev
-
-# ✅ For CI: use credential helper with service account key
-# (prefer Workload Identity Federation when possible)
-cat key.json | docker login -u _json_key --password-stdin \
-    https://us-central1-docker.pkg.dev
-
-# ❌ Do not use gcloud auth print-access-token for long-running processes
-# Tokens expire after 1 hour
+# Local: gcloud auth configure-docker us-central1-docker.pkg.dev
+# CI (prefer WIF over keys): cat key.json | docker login -u _json_key \
+#   --password-stdin https://us-central1-docker.pkg.dev
 ```
 
 ## Pydantic Configuration
 
-Define typed configuration models for GCP project settings and job specifications.
+Typed models for GCP project settings and job specs.
 
 ```python
 from pydantic import BaseModel, Field
 
 
 class GCPConfig(BaseModel, frozen=True):
-    """GCP project configuration."""
-
     project_id: str = Field(description="GCP project ID")
-    region: str = Field(default="us-central1", description="Default region")
-    zone: str = Field(default="us-central1-a", description="Default zone")
+    region: str = Field(default="us-central1")
+    zone: str = Field(default="us-central1-a")
 
 
 class ArtifactRegistryConfig(BaseModel, frozen=True):
@@ -481,7 +439,7 @@ class VertexJobConfig(BaseModel, frozen=True):
 
 
 class GCPProjectConfig(BaseModel, frozen=True):
-    """Complete GCP configuration for an ML project."""
+    """Complete GCP configuration — composed from a Hydra-compatible configs/gcp.yaml."""
 
     gcp: GCPConfig
     artifact_registry: ArtifactRegistryConfig
@@ -489,106 +447,31 @@ class GCPProjectConfig(BaseModel, frozen=True):
     vertex_job: VertexJobConfig
 ```
 
-```yaml
-# configs/gcp.yaml — Hydra-compatible configuration
-gcp:
-  project_id: my-cv-project
-  region: us-central1
-  zone: us-central1-a
+## Project Dependencies
 
-artifact_registry:
-  repository: ml-images
-  location: us-central1
-
-storage:
-  bucket_name: my-cv-project-ml
-  datasets_prefix: datasets/
-  checkpoints_prefix: checkpoints/
-  outputs_prefix: outputs/
-
-vertex_job:
-  display_name: resnet50-train
-  machine_type: n1-standard-8
-  accelerator_type: NVIDIA_TESLA_T4
-  accelerator_count: 1
-  staging_bucket: my-cv-project-ml-staging
-  boot_disk_size_gb: 100
-```
-
-## Integration with pixi
-
-Define pixi tasks for common GCP operations to ensure consistency across the team.
-
-```toml
-# pixi.toml — GCP task definitions
-[project]
-name = "my-cv-project"
-channels = ["conda-forge"]
-platforms = ["linux-64", "osx-arm64"]
-
-[dependencies]
-python = ">=3.11"
-google-cloud-storage = ">=2.14"
-google-cloud-aiplatform = ">=1.40"
-
-[feature.dev.dependencies]
-google-cloud-artifact-registry = ">=1.11"
-
-[tasks]
-# Authentication
-gcp-auth = "gcloud auth application-default login"
-gcp-docker-auth = "gcloud auth configure-docker us-central1-docker.pkg.dev"
-
-# Cloud Storage
-gcs-upload-data = "gsutil -m cp -r ./data/ gs://my-ml-bucket/datasets/"
-gcs-download-checkpoint = "gsutil cp gs://my-ml-bucket/checkpoints/latest.pt ./checkpoints/"
-gcs-sync-outputs = "gsutil -m rsync -r ./outputs/ gs://my-ml-bucket/runs/"
-
-# Docker — build and push
-docker-build-train = """docker build \
-    --tag us-central1-docker.pkg.dev/my-project/ml-images/training:latest \
-    --target training ."""
-docker-build-inference = """docker build \
-    --tag us-central1-docker.pkg.dev/my-project/ml-images/inference:latest \
-    --target inference ."""
-docker-push-train = "docker push us-central1-docker.pkg.dev/my-project/ml-images/training:latest"
-docker-push-inference = "docker push us-central1-docker.pkg.dev/my-project/ml-images/inference:latest"
-
-# Vertex AI
-vertex-submit = """python -c "
-from src.gcp import submit_training_job
-submit_training_job(
-    project='my-project',
-    location='us-central1',
-    display_name='training-run',
-    container_uri='us-central1-docker.pkg.dev/my-project/ml-images/training:latest',
-    args=['--config=configs/train.yaml'],
-)"
-"""
-vertex-list-jobs = "gcloud ai custom-jobs list --region=us-central1 --limit=10"
-vertex-logs = "gcloud ai custom-jobs stream-logs --region=us-central1"
-```
+Add the GCP client libraries with `pixi add google-cloud-storage google-cloud-aiplatform` (and `google-cloud-artifact-registry` as a dev dependency). Wrap the recurring `gcloud`/`gsutil` commands above in a `justfile` for team consistency — e.g. `just gcs-sync-outputs`, `just docker-push-train`, `just vertex-list-jobs` (`gcloud ai custom-jobs list --region=us-central1`).
 
 ## Best Practices
 
-1. **Use Artifact Registry, not Container Registry** -- Container Registry is deprecated; Artifact Registry supports Docker, Python, and npm packages in one service.
-2. **Pin image tags for Vertex AI jobs** -- never use `:latest` in production training jobs; use semantic version tags or Git SHAs.
-3. **Use Workload Identity Federation** -- avoid long-lived service account keys; use OIDC tokens from GitHub Actions or GKE workloads.
-4. **Store large datasets in Cloud Storage, not in Docker images** -- mount buckets with gcsfuse or download at job start.
-5. **Set `staging_bucket` for Vertex AI** -- Vertex AI needs a GCS bucket for staging scripts and intermediate artifacts.
-6. **Use regional resources** -- keep Artifact Registry, Cloud Storage, and Vertex AI jobs in the same region to minimize egress costs and latency.
-7. **Configure lifecycle rules on GCS buckets** -- auto-delete old checkpoints and temporary outputs to control storage costs.
-8. **Use prebuilt Vertex AI containers when possible** -- Google's PyTorch/TF containers have optimized CUDA and NCCL setups.
-9. **Tag images with both version and `latest`** -- version tags for reproducibility, `latest` for development convenience.
-10. **Grant least-privilege IAM roles** -- `roles/aiplatform.user` for submitting jobs, `roles/storage.objectViewer` for read-only data access.
+1. **Artifact Registry, not Container Registry** — the latter is deprecated.
+2. **Pin image tags for Vertex AI jobs** — semantic versions or Git SHAs, never `:latest` in production.
+3. **Use Workload Identity Federation** — OIDC tokens over long-lived service account keys.
+4. **Keep datasets in Cloud Storage, not images** — mount via gcsfuse or download at job start.
+5. **Set `staging_bucket`** — Vertex AI needs one for scripts and intermediate artifacts.
+6. **Write outputs to `AIP_MODEL_DIR` and pull them down when the job finishes** — the training VM is ephemeral; un-synced artifacts are lost.
+7. **Keep resources regional and co-located** to minimize egress cost and latency.
+8. **Configure GCS lifecycle rules** to auto-delete stale checkpoints/outputs.
+9. **Prefer prebuilt Vertex AI containers** — optimized CUDA/NCCL.
+10. **Tag with both version and `latest`** — reproducibility plus dev convenience.
+11. **Grant least-privilege IAM** — `roles/aiplatform.user` for jobs, `roles/storage.objectViewer` for read-only data.
 
-## Anti-Patterns to Avoid
+## Anti-Patterns
 
-- ❌ Using Container Registry (`gcr.io/`) for new projects -- use Artifact Registry (`pkg.dev/`) instead.
-- ❌ Baking credentials or service account keys into Docker images -- pass via environment variables or Workload Identity.
-- ❌ Running Vertex AI jobs with the default Compute Engine service account -- create dedicated service accounts with minimal permissions.
-- ❌ Storing training datasets inside Docker images -- images become massive and slow to pull; mount from GCS instead.
-- ❌ Using `gcloud auth print-access-token` in scripts -- tokens expire after 1 hour; use `gcloud auth application-default login` or service account impersonation.
-- ❌ Submitting Vertex AI jobs without a staging bucket -- the job will fail or use an auto-created bucket you cannot control.
-- ❌ Using multi-region GCS buckets for training data accessed from a single region -- pay extra egress with no benefit; use regional buckets.
-- ❌ Hardcoding project IDs and regions -- use Pydantic config models or environment variables for portability.
+- ❌ Using Container Registry (`gcr.io/`) for new projects — use `pkg.dev/`.
+- ❌ Baking credentials/SA keys into images — use env vars or Workload Identity.
+- ❌ Running Vertex jobs as the default Compute Engine SA — use a dedicated minimal-permission SA.
+- ❌ Storing datasets inside images — huge, slow to pull; mount from GCS.
+- ❌ `gcloud auth print-access-token` in scripts — tokens expire hourly; use ADC or SA impersonation.
+- ❌ Submitting Vertex jobs without a staging bucket.
+- ❌ Multi-region buckets for single-region training data — extra egress, no benefit.
+- ❌ Hardcoding project IDs/regions — use Pydantic config or env vars.

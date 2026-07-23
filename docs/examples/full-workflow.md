@@ -14,7 +14,7 @@ Claude generates the full project structure using the Master Skill, including W&
 
 ## Step 2: Define Configuration Models
 
-The Expert Coder creates Pydantic configs following the `pydantic-strict` skill:
+The Expert Coder creates Pydantic configs following the `pydantic` skill:
 
 ```python
 # src/yolo_detector/configs.py
@@ -240,7 +240,7 @@ Every PR must pass both before merge.
 
 | Decision | Skill Used |
 |----------|-----------|
-| Config validation | `pydantic-strict` |
+| Config validation | `pydantic` |
 | Model structure | `pytorch-lightning` |
 | Type annotations | `code-quality` |
 | Video/image I/O | `abstraction-patterns` |

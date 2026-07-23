@@ -1,0 +1,13 @@
+[skill]
+name = "pydantic-ai"
+version = "1.0.0"
+category = "cv-ml"
+tags = ["llm", "vlm", "structured-output", "agents", "pydantic", "gemini", "labeling"]
+
+[dependencies]
+requires = []
+recommends = ["pydantic", "model-evaluation", "loguru"]
+
+[compatibility]
+python = ">=3.11"
+libraries = { pydantic-ai = ">=0.0.14" }

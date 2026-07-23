@@ -22,7 +22,7 @@ This skill covers the full Lightning ecosystem: writing clean `LightningModule` 
 
 ## Related Skills
 
-- **[Pydantic Strict](../pydantic-strict/)** -- provides the configuration validation layer that all Lightning module and data parameters must use.
+- **[Pydantic](../pydantic/)** -- provides the configuration validation layer that all Lightning module and data parameters must use.
 - **[Abstraction Patterns](../abstraction-patterns/)** -- defines the ABC/Protocol interfaces that LightningModule subclasses implement for task-specific models.
 - **[Docker CV](../docker-cv/)** -- builds training containers that include the correct CUDA runtime and Lightning dependencies.
 - **[Code Quality](../code-quality/)** -- enforces type annotations on all Lightning hooks and callback methods through mypy strict mode.

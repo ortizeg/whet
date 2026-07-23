@@ -61,13 +61,14 @@ nav:
     - Overview: skills/index.md
     - Master Skill: skills/master-skill.md
     - PyTorch Lightning: skills/pytorch-lightning.md
-    - Pydantic Strict: skills/pydantic-strict.md
+    - Pydantic: skills/pydantic.md
     - Code Quality: skills/code-quality.md
     - Loguru: skills/loguru.md
     - Pixi: skills/pixi.md
     - Docker CV: skills/docker-cv.md
     - Hydra Config: skills/hydra-config.md
     - Testing: skills/testing.md
+    - Model Evaluation: skills/model-evaluation.md
     - OpenCV: skills/opencv.md
     - Matplotlib: skills/matplotlib.md
     - PyPI: skills/pypi.md
@@ -87,6 +88,7 @@ nav:
     - FastAPI: skills/fastapi.md
     - AWS SageMaker: skills/aws-sagemaker.md
     - Hugging Face: skills/huggingface.md
+    - PydanticAI: skills/pydantic-ai.md
     - Gradio: skills/gradio.md
     - Kubernetes: skills/kubernetes.md
   - Agents:

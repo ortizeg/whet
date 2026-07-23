@@ -22,7 +22,7 @@ These skills define the foundational patterns for all projects.
 | Skill | Description | Key Libraries |
 |-------|-------------|---------------|
 | [Master Skill](master-skill.md) | Universal coding conventions for all CV/ML code | Python, typing |
-| [Pydantic Strict](pydantic-strict.md) | Strict data validation and configuration models | Pydantic v2 |
+| [Pydantic](pydantic.md) | Strict data validation and configuration models | Pydantic v2 |
 | [Code Quality](code-quality.md) | Linting, formatting, and type checking setup | ruff, mypy |
 | [Loguru](loguru.md) | Structured logging for all projects (mandatory convention) | loguru |
 | [Abstraction Patterns](abstraction-patterns.md) | Design patterns for ML codebases | ABC, Protocol |
@@ -49,6 +49,8 @@ Skills specific to computer vision workflows.
 | [Matplotlib](matplotlib.md) | Visualization and plotting for CV results | matplotlib |
 | [ONNX](onnx.md) | Model export and optimization | onnx, onnxruntime, onnxslim |
 | [TensorRT](tensorrt.md) | GPU-optimized inference engine building | TensorRT, trtexec |
+| [Model Evaluation](model-evaluation.md) | Metrics, mAP/IoU, eval sets, failure analysis | supervision, torchmetrics |
+| [PydanticAI](pydantic-ai.md) | Type-safe LLM/VLM structured outputs, auto-labeling | pydantic-ai |
 | [Hugging Face](huggingface.md) | Pretrained models, fine-tuning, PEFT/LoRA | transformers, datasets, peft |
 
 ### Cloud & Deployment
@@ -91,7 +93,7 @@ Skills for code review and architectural decisions.
 
 | Phase | Recommended Skills |
 |-------|-------------------|
-| **Starting a new project** | Master Skill, Code Quality, Pixi, Pydantic Strict |
+| **Starting a new project** | Master Skill, Code Quality, Pixi, Pydantic |
 | **Building models** | PyTorch Lightning, Hydra Config |
 | **Training & experiments** | W&B or MLflow, TensorBoard |
 | **Preparing for production** | Docker CV, ONNX, Testing, Pre-commit |

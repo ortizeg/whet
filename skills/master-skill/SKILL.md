@@ -1,9 +1,12 @@
 ---
 name: master-skill
 description: >
-  Orchestrates new AI/CV project initialization using the whet framework.
-  Guides archetype selection, skill composition, directory scaffolding, and initial
-  configuration for new computer vision and deep learning projects.
+  Use this skill when starting a brand-new AI/CV project from scratch with the whet
+  framework — choosing an archetype, composing which skills apply, scaffolding the
+  src-layout directory structure, and laying down the initial pyproject, pre-commit,
+  pixi, and gitignore configuration. Reach for it at the very start of a new computer
+  vision or deep-learning project, even if the user just says "set up a new project" or
+  "bootstrap a repo". Not for adding features to an existing codebase.
 ---
 
 # Master Skill: Project Initialization
@@ -36,6 +39,7 @@ You are initializing a new AI/CV project using the whet framework.
    - TensorBoard
    - DVC (data versioning)
    - ONNX export
+   - Model evaluation (model-evaluation)
 
 4. **Generate project using selected archetype**
    - Copy archetype directory structure

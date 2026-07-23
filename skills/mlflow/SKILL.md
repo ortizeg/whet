@@ -1,9 +1,13 @@
 ---
 name: mlflow
 description: >
-  MLflow integration for experiment tracking, model registry, and model serving in
-  ML projects. Covers self-hosted setup, metric logging, artifact management,
-  model versioning, and opt-in integration patterns.
+  Use this skill whenever the project needs experiment tracking, a model registry, or
+  model serving with MLflow — logging params, metrics, and artifacts, comparing runs,
+  versioning and promoting models through stages, and running a self-hosted tracking
+  server. Reach for it any time you'd otherwise hand-roll run tracking or ask "which
+  config produced this result?" and the stack is MLflow, even if the user doesn't say it.
+  For the W&B or TensorBoard alternatives see wandb and tensorboard; for versioning the
+  data and model files themselves see dvc.
 ---
 
 # MLflow Tracking Integration for ML Projects

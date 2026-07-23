@@ -1,9 +1,12 @@
 ---
 name: pixi
 description: >
-  Manage Python project environments and dependencies using Pixi. Covers pixi.toml
-  configuration, conda/PyPI dependency management, task definitions, lock files,
-  cross-platform environments, and CUDA toolkit setup.
+  Use this skill when managing a project's environment and dependencies with Pixi —
+  authoring pixi.toml, mixing conda and PyPI dependencies, defining tasks, lock files,
+  cross-platform environments, and CUDA toolkit setup. Reach for it any time you'd
+  otherwise reach for conda, pip, or venv to set up or update a CV/ML environment, even
+  if the user just says "add this dependency" or "set up the environment". For building
+  and publishing the package to PyPI, see pypi.
 ---
 
 # Pixi Skill

@@ -1,18 +1,17 @@
 ---
 name: huggingface
 description: >
-  Hugging Face ecosystem patterns for NLP and vision. Covers Transformers
-  models, datasets library, tokenizers, pipelines, fine-tuning with Trainer,
-  PEFT/LoRA adapters, model hub publishing, and inference optimization.
+  Use this skill when working with the Hugging Face ecosystem for NLP or vision — loading
+  Transformers models with AutoModel, the datasets library, tokenizers, task pipelines,
+  fine-tuning with Trainer, PEFT/LoRA adapters, publishing to the Model Hub, and
+  quantization/inference optimization. Reach for it any time a pretrained transformer, an
+  HF dataset, or the Hub is involved, even if the user doesn't say "Hugging Face". For the
+  training-loop framework around these models see pytorch-lightning.
 ---
 
 # Hugging Face Skill
 
-You are working with the Hugging Face ecosystem (Transformers, Datasets, Tokenizers, PEFT). Follow these patterns exactly.
-
-## Core Philosophy
-
-Hugging Face provides a unified API for loading, fine-tuning, and deploying pretrained models. Use `AutoModel` and `AutoTokenizer` classes for model loading — never hardcode model class names unless absolutely necessary. Use the `datasets` library for all data loading and preprocessing. Use the `Trainer` API for fine-tuning unless you need custom training loops.
+Patterns for the Hugging Face ecosystem (Transformers, Datasets, Tokenizers, PEFT). Use `Auto*` classes for loading (never hardcode model class names), the `datasets` library for data, and the `Trainer` API for fine-tuning unless you need a custom loop.
 
 ## Model Loading
 
@@ -72,13 +71,8 @@ def load_vision_model(config: ModelConfig) -> tuple:
 
 
 def load_text_model(config: ModelConfig) -> tuple:
-    """Load a text model and tokenizer."""
-    tokenizer = AutoTokenizer.from_pretrained(
-        config.model_name,
-        revision=config.revision,
-        cache_dir=config.cache_dir,
-    )
-
+    """Load a text model and tokenizer (same shape as the vision path)."""
+    tokenizer = AutoTokenizer.from_pretrained(config.model_name, revision=config.revision)
     model = AutoModelForSequenceClassification.from_pretrained(
         config.model_name,
         revision=config.revision,
@@ -86,7 +80,6 @@ def load_text_model(config: ModelConfig) -> tuple:
         device_map=config.device_map,
         cache_dir=config.cache_dir,
     )
-
     return model, tokenizer
 ```
 
@@ -211,22 +204,9 @@ class FinetuneConfig(BaseModel, frozen=True):
 
 
 def create_training_args(config: FinetuneConfig) -> TrainingArguments:
-    """Create TrainingArguments from config."""
+    """Map config fields directly onto TrainingArguments, plus fixed extras."""
     return TrainingArguments(
-        output_dir=config.output_dir,
-        num_train_epochs=config.num_train_epochs,
-        per_device_train_batch_size=config.per_device_train_batch_size,
-        per_device_eval_batch_size=config.per_device_eval_batch_size,
-        learning_rate=config.learning_rate,
-        weight_decay=config.weight_decay,
-        warmup_ratio=config.warmup_ratio,
-        fp16=config.fp16,
-        eval_strategy=config.eval_strategy,
-        save_strategy=config.save_strategy,
-        load_best_model_at_end=config.load_best_model_at_end,
-        metric_for_best_model=config.metric_for_best_model,
-        push_to_hub=config.push_to_hub,
-        hub_model_id=config.hub_model_id,
+        **config.model_dump(),
         logging_steps=50,
         dataloader_num_workers=4,
         dataloader_pin_memory=True,
@@ -365,47 +345,21 @@ def create_image_classifier(
     device: int = 0,
 ) -> pipeline:
     """Create an image classification pipeline."""
-    return pipeline(
-        "image-classification",
-        model=model_name,
-        device=device,
-    )
+    return pipeline("image-classification", model=model_name, device=device)
 
 
-def create_object_detector(
-    model_name: str = "facebook/detr-resnet-50",
-    device: int = 0,
-    threshold: float = 0.5,
-) -> pipeline:
+# Same pattern for other tasks — just change the task string and default model:
+#   "object-detection"              (facebook/detr-resnet-50, add threshold=0.5)
+#   "zero-shot-image-classification" (openai/clip-vit-base-patch32)
+def create_object_detector(model_name: str = "facebook/detr-resnet-50", device: int = 0) -> pipeline:
     """Create an object detection pipeline."""
-    return pipeline(
-        "object-detection",
-        model=model_name,
-        device=device,
-        threshold=threshold,
-    )
+    return pipeline("object-detection", model=model_name, device=device, threshold=0.5)
 
 
-def create_zero_shot_classifier(
-    model_name: str = "openai/clip-vit-base-patch32",
-    device: int = 0,
-) -> pipeline:
-    """Create a zero-shot image classification pipeline."""
-    return pipeline(
-        "zero-shot-image-classification",
-        model=model_name,
-        device=device,
-    )
-
-
-# Usage
+# Usage: classifier(...) -> [{"label": "cat", "score": 0.97}, ...]
+#        detector(...)   -> [{"label": "person", "score": 0.99, "box": {...}}, ...]
 classifier = create_image_classifier()
 results = classifier("path/to/image.jpg")
-# [{"label": "cat", "score": 0.97}, {"label": "dog", "score": 0.02}]
-
-detector = create_object_detector()
-results = detector("path/to/image.jpg")
-# [{"label": "person", "score": 0.99, "box": {"xmin": 10, "ymin": 20, "xmax": 200, "ymax": 400}}]
 ```
 
 ## Model Hub Publishing
@@ -445,30 +399,23 @@ def push_model_to_hub(
 
 
 def create_model_card(
-    repo_id: str,
-    model_name: str,
-    dataset_name: str,
-    metrics: dict[str, float],
-    language: str = "en",
+    repo_id: str, model_name: str, dataset_name: str, metrics: dict[str, float]
 ) -> ModelCard:
-    """Create and push a model card."""
+    """Create and push a model card (always include license, dataset, metrics)."""
     card_data = ModelCardData(
-        language=language,
+        language="en",
         license="apache-2.0",
         model_name=model_name,
         datasets=[dataset_name],
         metrics=list(metrics.keys()),
     )
-
     card = ModelCard.from_template(
         card_data,
         model_id=repo_id,
         model_description=f"Fine-tuned {model_name} on {dataset_name}.",
         training_metrics=metrics,
     )
-
     card.push_to_hub(repo_id)
-    logger.info("Model card pushed to: {}", repo_id)
     return card
 ```
 
@@ -522,9 +469,4 @@ def load_quantized_model(
 
 ## Integration with Other Skills
 
-- **PyTorch Lightning** — Use Lightning Trainer for custom training loops with HF models.
-- **W&B** — Pass `report_to=["wandb"]` in TrainingArguments for experiment tracking.
-- **ONNX** — Export HF models via `optimum` for optimized inference.
-- **AWS SageMaker** — Deploy HF models on SageMaker with the HF DLC (Deep Learning Container).
-- **FastAPI** — Serve HF pipelines behind async API endpoints.
-- **DVC** — Version datasets downloaded from Hugging Face Hub.
+Wrap HF models in a Lightning Trainer for custom loops; set `report_to=["wandb"]` for tracking; export via `optimum`/ONNX for inference; deploy on SageMaker (HF DLC) or behind FastAPI; version Hub datasets with DVC.

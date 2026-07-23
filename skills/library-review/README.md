@@ -23,6 +23,6 @@ The evaluation framework scores libraries across multiple dimensions: maintenanc
 ## Related Skills
 
 - **[Abstraction Patterns](../abstraction-patterns/)** -- implements the wrapping strategy determined by the library review process.
-- **[Pydantic Strict](../pydantic-strict/)** -- typing compatibility with Pydantic models is a key evaluation criterion for new libraries.
+- **[Pydantic](../pydantic/)** -- typing compatibility with Pydantic models is a key evaluation criterion for new libraries.
 - **[Code Quality](../code-quality/)** -- mypy compatibility and type stub availability factor heavily into the evaluation score.
 - **[Pixi](../pixi/)** -- accepted libraries are added to `pixi.toml` with pinned versions and documented in the lockfile.

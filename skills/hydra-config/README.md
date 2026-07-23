@@ -42,5 +42,5 @@ python train.py --multirun training.learning_rate=1e-3,1e-4,1e-5
 ## See Also
 
 - `SKILL.md` in this directory for full documentation and code examples
-- `pydantic-strict` skill for validation patterns
+- `pydantic` skill for validation patterns
 - `pytorch-lightning` skill for training loop integration

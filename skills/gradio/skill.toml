@@ -5,7 +5,7 @@ category = "infra"
 tags = ["demo", "ui", "gradio", "prototyping", "serving"]
 
 [dependencies]
-requires = ["pydantic-strict", "loguru"]
+requires = ["pydantic", "loguru"]
 recommends = ["huggingface", "fastapi"]
 
 [compatibility]
