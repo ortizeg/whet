@@ -21,6 +21,9 @@ def install(
     scope_global: bool = typer.Option(False, "--global", "-g", help="Install to global directory."),
     scope_local: bool = typer.Option(False, "--local", "-l", help="Install to local project."),
     category: str | None = typer.Option(None, "--category", "--cat", help="Only install category."),
+    include_extras: bool = typer.Option(
+        False, "--include-extras", help="Also install opt-in 'extra' tier skills."
+    ),
     with_settings: bool = typer.Option(
         False, "--with-settings", "-s", help="Also apply settings template."
     ),
@@ -36,6 +39,16 @@ def install(
     all_skills = discover_skills(cfg.skills_dir)
     if category:
         all_skills = [s for s in all_skills if s.category == category]
+
+    if not include_extras:
+        skipped = [s for s in all_skills if s.tier == "extra"]
+        all_skills = [s for s in all_skills if s.tier != "extra"]
+        if skipped:
+            names = ", ".join(s.name for s in skipped)
+            console.print(
+                f"[dim]Skipping {len(skipped)} extra skills ({names}). "
+                f"Use --include-extras to install them.[/dim]"
+            )
 
     if not all_skills:
         console.print("[yellow]No skills found to install.[/yellow]")

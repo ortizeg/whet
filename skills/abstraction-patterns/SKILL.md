@@ -13,7 +13,10 @@ description: >
 
 # Abstraction Patterns Skill
 
-Well-abstracted Python for AI/CV projects. Abstraction exists to reduce cognitive load, not to add layers — every abstraction must justify itself by making at least three call sites simpler.
+Well-abstracted Python for AI/CV projects. Abstraction exists to reduce cognitive
+load, not to add layers — every abstraction must justify itself by making at least
+three call sites simpler. This page carries the decision rule and the two shapes
+that cover most cases; the deep dives hold the full worked patterns.
 
 ## The Rule: When to Abstract
 
@@ -28,23 +31,70 @@ Do NOT abstract when:
 - The abstraction hides important details (GPU memory management, batch dimension handling)
 - A simple function would suffice (do not create a class for a single method)
 
-## Pattern 1: VideoReader Abstraction
+## Shape 1: A function, until proven otherwise
 
-Video reading involves resource management (opening/closing file handles), frame iteration, and metadata access — a perfect candidate for abstraction. Raw `cv2.VideoCapture` usage scattered across a codebase is easy to get wrong (forgetting `cap.release()`, missing `isOpened()` checks). Wrap it in a context manager:
+The default abstraction is a module-level function with a precise signature and
+explicit errors. Reach for a class only when there is state to hold or resources to
+manage.
 
 ```python
-"""Video reader with proper resource management."""
+def load_image(path: str | Path, color_space: ColorSpace = "rgb") -> np.ndarray:
+    """Load an image with validation. Raises FileNotFoundError / ValueError / RuntimeError."""
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"Image not found: {path}")
+    image = cv2.imread(str(path), cv2.IMREAD_COLOR)  # BGR
+    if image is None:
+        raise RuntimeError(f"Failed to decode image: {path}")
+    return cv2.cvtColor(image, cv2.COLOR_BGR2RGB) if color_space == "rgb" else image
+```
 
-from __future__ import annotations
+If you find yourself writing `class XProcessor` whose only job is to store one
+parameter and expose one method, use `functools.partial` instead.
 
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Iterator
+## Shape 2: A context manager for anything that must be released
 
-import cv2
-import numpy as np
+File handles, capture devices, model sessions, and connections all leak when the
+release path is left to the caller. Own it in `__enter__`/`__exit__`:
+
+```python
+class VideoReader:
+    """Context-managed OpenCV video reader."""
+
+    def __enter__(self) -> VideoReader:
+        self._cap = cv2.VideoCapture(str(self._path))
+        if not self._cap.isOpened():
+            raise RuntimeError(f"Failed to open video: {self._path}")
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        if self._cap is not None:
+            self._cap.release()
+            self._cap = None
+
+    def __iter__(self) -> Iterator[np.ndarray]:
+        while True:
+            ret, frame = self._cap.read()
+            if not ret:
+                break
+            yield frame
 
 
+with VideoReader("input.mp4") as reader:
+    for frame in reader:
+        visualize(frame, model.predict(frame))
+```
+
+Methods that require the managed resource should raise a clear `RuntimeError` when
+used outside the `with` block rather than failing on a `None` attribute.
+
+## Shape 3: A frozen dataclass for the values that travel together
+
+When several call sites pass around the same tuple of values, name it. A frozen
+dataclass documents the shape, prevents accidental mutation, and gives derived
+values a home — without introducing behaviour the caller has to learn.
+
+```python
 @dataclass(frozen=True)
 class VideoMetadata:
     """Immutable metadata for a video file."""
@@ -58,412 +108,32 @@ class VideoMetadata:
     @property
     def duration_seconds(self) -> float:
         return self.total_frames / self.fps if self.fps > 0 else 0.0
-
-
-class VideoReader:
-    """Context-managed OpenCV video reader.
-
-    Always use as a context manager so resources are released:
-        with VideoReader("input.mp4") as reader:
-            for frame in reader:
-                process(frame)
-    """
-
-    def __init__(self, path: str | Path) -> None:
-        self._path = Path(path)
-        self._cap: cv2.VideoCapture | None = None
-        self._metadata: VideoMetadata | None = None
-
-    @property
-    def metadata(self) -> VideoMetadata:
-        if self._metadata is None:
-            raise RuntimeError("VideoReader must be used as a context manager")
-        return self._metadata
-
-    def __enter__(self) -> VideoReader:
-        self._cap = cv2.VideoCapture(str(self._path))
-        if not self._cap.isOpened():
-            raise RuntimeError(f"Failed to open video: {self._path}")
-        self._metadata = VideoMetadata(
-            path=self._path,
-            fps=self._cap.get(cv2.CAP_PROP_FPS),
-            total_frames=int(self._cap.get(cv2.CAP_PROP_FRAME_COUNT)),
-            width=int(self._cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
-            height=int(self._cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-        )
-        return self
-
-    def __exit__(self, *args: object) -> None:
-        if self._cap is not None:
-            self._cap.release()
-            self._cap = None
-
-    def __iter__(self) -> Iterator[np.ndarray]:
-        if self._cap is None:
-            raise RuntimeError("VideoReader must be used as a context manager")
-        while True:
-            ret, frame = self._cap.read()
-            if not ret:
-                break
-            yield frame
-
-    def read_frame(self, frame_idx: int) -> np.ndarray:
-        """Read a specific frame by zero-based index (BGR)."""
-        if self._cap is None:
-            raise RuntimeError("VideoReader must be used as a context manager")
-        if frame_idx < 0 or frame_idx >= self.metadata.total_frames:
-            raise IndexError(f"Frame index {frame_idx} out of range [0, {self.metadata.total_frames})")
-        self._cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
-        ret, frame = self._cap.read()
-        if not ret:
-            raise RuntimeError(f"Failed to read frame {frame_idx}")
-        return frame
 ```
 
-Usage is now clean and leak-free:
-
-```python
-with VideoReader("input.mp4") as reader:
-    print(f"{reader.metadata.fps} FPS, {reader.metadata.total_frames} frames")
-    for frame in reader:
-        visualize(frame, model.predict(frame))
-    middle = reader.read_frame(reader.metadata.total_frames // 2)
-```
-
-## Pattern 2: Image Loading Abstraction
-
-Image loading seems simple but involves format detection, color space conversion, validation, and error handling. Abstracting it prevents inconsistencies.
-
-```python
-"""Robust image loading with validation."""
-
-from __future__ import annotations
-
-from pathlib import Path
-from typing import Literal
-
-import cv2
-import numpy as np
-
-ColorSpace = Literal["rgb", "bgr", "gray"]
-
-SUPPORTED_EXTENSIONS: frozenset[str] = frozenset({
-    ".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp",
-})
-
-
-def load_image(
-    path: str | Path,
-    color_space: ColorSpace = "rgb",
-    max_size: int | None = None,
-) -> np.ndarray:
-    """Load an image with validation and optional longest-edge resize.
-
-    Returns (H, W, 3) for color or (H, W) for grayscale. Raises
-    FileNotFoundError, ValueError (unsupported extension), or RuntimeError
-    (decode failure).
-    """
-    path = Path(path)
-    if not path.exists():
-        raise FileNotFoundError(f"Image not found: {path}")
-    if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
-        raise ValueError(f"Unsupported image format: {path.suffix}")
-
-    image = cv2.imread(str(path), cv2.IMREAD_COLOR)  # OpenCV loads BGR
-    if image is None:
-        raise RuntimeError(f"Failed to decode image: {path}")
-
-    if color_space == "rgb":
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    elif color_space == "gray":
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # "bgr" needs no conversion
-
-    if max_size is not None:
-        h, w = image.shape[:2]
-        scale = max_size / max(h, w)
-        if scale < 1.0:
-            image = cv2.resize(image, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
-
-    return image
-
-
-def save_image(
-    image: np.ndarray,
-    path: str | Path,
-    color_space: ColorSpace = "rgb",
-    quality: int = 95,
-) -> None:
-    """Save an image, creating parent dirs and picking encode params by suffix."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if image.ndim not in (2, 3):
-        raise ValueError(f"Expected 2D or 3D array, got {image.ndim}D")
-
-    if color_space == "rgb" and image.ndim == 3:
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-
-    params: list[int] = []
-    if path.suffix.lower() in (".jpg", ".jpeg"):
-        params = [cv2.IMWRITE_JPEG_QUALITY, quality]
-    elif path.suffix.lower() == ".png":
-        params = [cv2.IMWRITE_PNG_COMPRESSION, 3]
-
-    cv2.imwrite(str(path), image, params)
-```
-
-## Pattern 3: Metric Computation Abstraction
-
-Metrics in CV projects require accumulation over batches and reset semantics. Abstract this into a consistent `update`/`compute`/`reset` interface.
-
-```python
-"""Metric computation with accumulation and reset."""
-
-from __future__ import annotations
-
-from abc import ABC, abstractmethod
-
-import numpy as np
-
-
-class Metric(ABC):
-    """Base class for metrics accumulated over batches; reset() between epochs."""
-
-    @abstractmethod
-    def update(self, predictions: np.ndarray, targets: np.ndarray) -> None:
-        ...
-
-    @abstractmethod
-    def compute(self) -> dict[str, float]:
-        ...
-
-    @abstractmethod
-    def reset(self) -> None:
-        """Reset accumulated state for a new epoch."""
-        ...
-
-
-class AccuracyMetric(Metric):
-    """Top-1 accuracy with accumulation."""
-
-    def __init__(self) -> None:
-        self._correct: int = 0
-        self._total: int = 0
-
-    def update(self, predictions: np.ndarray, targets: np.ndarray) -> None:
-        pred_classes = np.argmax(predictions, axis=1)
-        self._correct += int(np.sum(pred_classes == targets))
-        self._total += len(targets)
-
-    def compute(self) -> dict[str, float]:
-        if self._total == 0:
-            return {"accuracy": 0.0}
-        return {"accuracy": self._correct / self._total}
-
-    def reset(self) -> None:
-        self._correct = 0
-        self._total = 0
-
-
-class IoUMetric(Metric):
-    """Per-class + mean IoU for segmentation; predictions/targets are (N, H, W) class indices."""
-
-    def __init__(self, num_classes: int, ignore_index: int = -1) -> None:
-        self._num_classes = num_classes
-        self._ignore_index = ignore_index
-        self._intersection = np.zeros(num_classes, dtype=np.int64)
-        self._union = np.zeros(num_classes, dtype=np.int64)
-
-    def update(self, predictions: np.ndarray, targets: np.ndarray) -> None:
-        mask = targets != self._ignore_index
-        pred_masked, target_masked = predictions[mask], targets[mask]
-        for cls in range(self._num_classes):
-            pred_cls = pred_masked == cls
-            target_cls = target_masked == cls
-            self._intersection[cls] += int(np.sum(pred_cls & target_cls))
-            self._union[cls] += int(np.sum(pred_cls | target_cls))
-
-    def compute(self) -> dict[str, float]:
-        iou_per_class = np.zeros(self._num_classes)
-        for cls in range(self._num_classes):
-            if self._union[cls] > 0:
-                iou_per_class[cls] = self._intersection[cls] / self._union[cls]
-        result: dict[str, float] = {"mean_iou": float(np.mean(iou_per_class))}
-        for cls in range(self._num_classes):
-            result[f"iou_class_{cls}"] = float(iou_per_class[cls])
-        return result
-
-    def reset(self) -> None:
-        self._intersection[:] = 0
-        self._union[:] = 0
-
-
-class MetricCollection:
-    """Runs several metrics together, prefixing each metric's keys with its name."""
-
-    def __init__(self, metrics: dict[str, Metric]) -> None:
-        self._metrics = metrics
-
-    def update(self, predictions: np.ndarray, targets: np.ndarray) -> None:
-        for metric in self._metrics.values():
-            metric.update(predictions, targets)
-
-    def compute(self) -> dict[str, float]:
-        results: dict[str, float] = {}
-        for name, metric in self._metrics.items():
-            for key, value in metric.compute().items():
-                results[f"{name}/{key}"] = value
-        return results
-
-    def reset(self) -> None:
-        for metric in self._metrics.values():
-            metric.reset()
-```
-
-## Pattern 4: Model Inference Wrapper
-
-Wrap model inference to handle preprocessing, batching, postprocessing, and device management in one place.
-
-```python
-"""Model inference wrapper with preprocessing and postprocessing."""
-
-from __future__ import annotations
-
-from pathlib import Path
-
-import numpy as np
-import torch
-import torch.nn as nn
-
-
-class InferenceWrapper:
-    """Runs inference with device management, preprocessing, batching, and postprocessing in one interface."""
-
-    def __init__(
-        self,
-        model: nn.Module,
-        device: str = "cuda",
-        input_size: tuple[int, int] = (224, 224),
-        mean: tuple[float, ...] = (0.485, 0.456, 0.406),
-        std: tuple[float, ...] = (0.229, 0.224, 0.225),
-    ) -> None:
-        self._model = model.to(device).eval()
-        self._device = torch.device(device)
-        self._input_size = input_size
-        self._mean = np.array(mean, dtype=np.float32)
-        self._std = np.array(std, dtype=np.float32)
-
-    def preprocess(self, image: np.ndarray) -> torch.Tensor:
-        """Resize, normalize, CHW, add batch dim, move to device."""
-        import cv2
-
-        resized = cv2.resize(image, (self._input_size[1], self._input_size[0]))
-        normalized = (resized.astype(np.float32) / 255.0 - self._mean) / self._std
-        tensor = torch.from_numpy(normalized).permute(2, 0, 1).unsqueeze(0)
-        return tensor.to(self._device)
-
-    @torch.no_grad()
-    def predict(self, image: np.ndarray) -> np.ndarray:
-        return self._model(self.preprocess(image)).cpu().numpy()
-
-    @torch.no_grad()
-    def predict_batch(self, images: list[np.ndarray]) -> np.ndarray:
-        batch = torch.cat([self.preprocess(img) for img in images], dim=0)
-        return self._model(batch).cpu().numpy()
-
-    @classmethod
-    def from_checkpoint(
-        cls,
-        checkpoint_path: str | Path,
-        model_class: type[nn.Module],
-        **kwargs: object,
-    ) -> InferenceWrapper:
-        """Load model from a checkpoint and wrap it."""
-        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=True)
-        model = model_class(**checkpoint.get("hparams", {}))
-        model.load_state_dict(checkpoint["state_dict"])
-        return cls(model=model, **kwargs)
-```
-
-## Testing Abstractions
-
-```python
-"""Tests for abstraction patterns."""
-
-from __future__ import annotations
-
-import numpy as np
-import pytest
-
-from my_project.io import VideoReader, load_image
-from my_project.metrics import AccuracyMetric, IoUMetric, MetricCollection
-
-
-def test_accuracy_metric_accumulates_across_batches() -> None:
-    metric = AccuracyMetric()
-    metric.update(np.array([[0.9, 0.1], [0.2, 0.8], [0.7, 0.3], [0.4, 0.6]]), np.array([0, 1, 0, 0]))  # 3/4
-    metric.update(np.array([[0.8, 0.2], [0.3, 0.7]]), np.array([0, 1]))  # 2/2
-    assert metric.compute()["accuracy"] == pytest.approx(5 / 6)
-
-
-def test_accuracy_metric_reset() -> None:
-    metric = AccuracyMetric()
-    metric.update(np.array([[0.9, 0.1]]), np.array([0]))
-    metric.reset()
-    assert metric.compute()["accuracy"] == 0.0
-
-
-def test_load_image_not_found() -> None:
-    with pytest.raises(FileNotFoundError, match="Image not found"):
-        load_image("/nonexistent/image.jpg")
-```
-
-## When NOT to Abstract
-
-### Do Not Abstract Single-Use Logic
-
-```python
-# BAD: Unnecessary abstraction for one-off logic
-class ImagePreprocessor:
-    def __init__(self, size):
-        self.size = size
-
-    def process(self, image):
-        return cv2.resize(image, self.size)
-
-# GOOD: Just use the function directly
-resized = cv2.resize(image, (224, 224))
-```
-
-### Do Not Hide Critical Details
-
-```python
-# BAD: Hides GPU memory management
-class AutoBatcher:
-    def auto_batch(self, items):
-        # Magically figures out batch size based on GPU memory
-        # Developer has no idea what's happening
-        ...
-
-# GOOD: Be explicit about batch size
-for batch in DataLoader(dataset, batch_size=32):
-    ...
-```
-
-### Do Not Create Classes for Single Functions
-
-```python
-# BAD: A class with one method is just a function
-class NMSProcessor:
-    def __init__(self, threshold):
-        self.threshold = threshold
-
-    def process(self, boxes, scores):
-        return nms(boxes, scores, self.threshold)
-
-# GOOD: Use functools.partial or just pass the argument
-from functools import partial
-
-apply_nms = partial(nms, iou_threshold=0.5)
-filtered = apply_nms(boxes, scores)
-```
+This is the cheapest abstraction available: no inheritance, no lifecycle, no hidden
+control flow. Prefer it before reaching for a class with methods.
+
+## Conventions
+
+- **Count call sites before abstracting** — three real uses, not three imagined ones.
+- **Type every boundary** — the whole point of a wrapper is that call sites stop guessing shapes and dtypes.
+- **Raise specific exceptions** with the offending value in the message; never return `None` for failure.
+- **Keep configuration explicit** — frozen dataclasses or Pydantic models over loose kwargs dicts.
+- **One interface per concept** — if several implementations must be interchangeable, define the ABC once (`update`/`compute`/`reset`) and let the call site stay ignorant of which one it holds.
+- **Make the abstraction testable without hardware** — if a wrapper can only be tested with a real camera or GPU, the boundary is wrong.
+- **Prefer composition over inheritance** — a collection that drives several implementations beats a deep class hierarchy.
+
+## Anti-patterns
+
+- **Abstracting single-use logic** — one call site means inline it; a class wrapping a single `cv2.resize` is noise.
+- **Hiding critical details** — an "auto batcher" that silently picks batch size from GPU memory removes the developer's ability to reason about OOM.
+- **A class for a single function** — `NMSProcessor(threshold).process(...)` is just `partial(nms, iou_threshold=...)`.
+- **Premature base classes** — an ABC with exactly one subclass is indirection with no payoff.
+- **Leaky resource wrappers** — exposing the raw `cv2.VideoCapture` alongside the wrapper invites callers to bypass cleanup.
+
+## Deep dives
+
+- `references/wrapper-patterns.md` — read when writing a full wrapper around a third-party API: complete `VideoReader`, validated image load/save, and an inference wrapper with preprocessing and batching.
+- `references/interface-design.md` — read when several implementations must be interchangeable and you need an ABC plus a collection that drives them (metrics example).
+- `references/when-not-to-abstract.md` — read when judging whether existing code is over-engineered, or before adding a class you are not sure earns its place.
+- `references/testing-abstractions.md` — read when writing tests that pin an abstraction's contract: accumulation, reset semantics, and error paths.

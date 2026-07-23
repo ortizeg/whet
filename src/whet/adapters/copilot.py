@@ -30,7 +30,8 @@ class CopilotAdapter:
         """
         target_dir.mkdir(parents=True, exist_ok=True)
         dest = target_dir / self.INSTRUCTIONS_FILE
-        content = skill.read_skill_md()
+        # Copilot stores one flat file, so inline references rather than lose them
+        content = skill.read_flattened()
         content = _strip_frontmatter(content)
 
         start = f"<!-- whet:{skill.name}:start -->"

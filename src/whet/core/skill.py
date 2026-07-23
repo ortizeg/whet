@@ -33,6 +33,8 @@ class SkillMetadata(BaseModel):
     name: str
     version: str = "1.0.0"
     category: str = "core"
+    tier: str = "core"
+    """Install tier: "core" installs by default, "extra" is opt-in via --include-extras."""
     tags: list[str] = Field(default_factory=list)
 
     dependencies: SkillDependencies = Field(default_factory=SkillDependencies)
@@ -71,9 +73,36 @@ class Skill(BaseModel):
         """Whether this skill has a skill.toml metadata file."""
         return self.skill_toml_path.exists()
 
+    @property
+    def tier(self) -> str:
+        """Install tier from metadata ("core" or "extra"); defaults to "core"."""
+        return self.metadata.tier if self.metadata else "core"
+
+    @property
+    def references_dir(self) -> Path:
+        """Path to the optional references/ directory (progressive disclosure)."""
+        return self.path / "references"
+
+    def reference_files(self) -> list[Path]:
+        """Sorted reference files, if this skill uses progressive disclosure."""
+        if not self.references_dir.is_dir():
+            return []
+        return sorted(self.references_dir.glob("*.md"))
+
     def read_skill_md(self) -> str:
         """Read the full SKILL.md content."""
         return self.skill_md_path.read_text()
+
+    def read_flattened(self) -> str:
+        """SKILL.md with every reference file appended.
+
+        Used by platforms that store a skill as a single flat file and therefore
+        cannot follow `references/` links.
+        """
+        parts = [self.read_skill_md()]
+        for ref in self.reference_files():
+            parts.append(f"\n\n---\n\n# Reference: {ref.stem}\n\n{ref.read_text()}")
+        return "".join(parts)
 
     @classmethod
     def from_directory(cls, path: Path) -> Skill:
@@ -106,6 +135,7 @@ class Skill(BaseModel):
                 name=skill_data.get("name", name),
                 version=skill_data.get("version", "1.0.0"),
                 category=skill_data.get("category", "core"),
+                tier=skill_data.get("tier", "core"),
                 tags=skill_data.get("tags", []),
                 dependencies=SkillDependencies(**deps_data),
                 compatibility=SkillCompatibility(**compat_data),

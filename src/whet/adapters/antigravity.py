@@ -32,6 +32,10 @@ class AntigravityAdapter:
         if src_readme.exists():
             shutil.copy2(src_readme, dest / "README.md")
 
+        # Copy references/ so the SKILL.md deep-dive links resolve after install
+        if skill.references_dir.is_dir():
+            shutil.copytree(skill.references_dir, dest / "references", dirs_exist_ok=True)
+
         return dest
 
     def remove_skill(self, skill_name: str, target_dir: Path) -> bool:

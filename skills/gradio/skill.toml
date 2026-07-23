@@ -2,6 +2,7 @@
 name = "gradio"
 version = "1.0.0"
 category = "infra"
+tier = "extra"
 tags = ["demo", "ui", "gradio", "prototyping", "serving"]
 
 [dependencies]
