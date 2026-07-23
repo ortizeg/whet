@@ -97,7 +97,7 @@ async def predict(
 
 ## Combines Well With
 
-- **Pydantic Strict** -- Frozen BaseModel patterns for all API schemas
+- **Pydantic** -- Frozen BaseModel patterns for all API schemas
 - **ONNX / TensorRT** -- Optimized model formats loaded in lifespan
 - **Docker CV** -- Production containerization for FastAPI services
 - **Loguru** -- Structured logging in middleware and exception handlers

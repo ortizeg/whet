@@ -23,6 +23,6 @@ The core principle is simple: business logic depends on interfaces you own, neve
 ## Related Skills
 
 - **[Library Review](../library-review/)** -- evaluates libraries before adoption, determining whether and how they should be wrapped.
-- **[Pydantic Strict](../pydantic-strict/)** -- configuration objects are passed to abstract interfaces, decoupling parameter definitions from implementations.
+- **[Pydantic](../pydantic/)** -- configuration objects are passed to abstract interfaces, decoupling parameter definitions from implementations.
 - **[PyTorch Lightning](../pytorch-lightning/)** -- Lightning modules implement task-specific interfaces defined through abstraction patterns.
 - **[Code Quality](../code-quality/)** -- mypy strict mode verifies that implementations correctly satisfy Protocol and ABC contracts.

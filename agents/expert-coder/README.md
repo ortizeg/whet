@@ -35,7 +35,7 @@ Expert Coder: "I'll create a pipeline with proper abstractions:
 
 ## Related Skills
 
-- `pydantic-strict` — Config and data structure patterns
+- `pydantic` — Config and data structure patterns
 - `abstraction-patterns` — When and how to abstract
 - `code-quality` — Type hints and formatting rules
 - `pytorch-lightning` — ML-specific patterns

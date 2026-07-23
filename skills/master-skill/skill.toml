@@ -6,7 +6,7 @@ tags = ["conventions", "python", "coding-standards"]
 
 [dependencies]
 requires = []
-recommends = ["pydantic-strict", "code-quality", "loguru"]
+recommends = ["pydantic", "code-quality", "loguru"]
 
 [compatibility]
 python = ">=3.11"

@@ -1,18 +1,18 @@
 ---
-name: pydantic-strict
+name: pydantic
 description: >
-  Configuration and data validation using Pydantic V2 with strict typing for AI/CV
-  projects. Covers frozen models, discriminated unions, custom validators, settings
-  management, and load-time validation patterns.
+  Use this skill when validating configuration or data structures with Pydantic V2 —
+  frozen/immutable config models, discriminated unions, custom validators, settings
+  management, and strict load-time validation. Reach for it any time you'd otherwise pass
+  around raw dicts or plain dataclasses for config or structured data, even if the user
+  doesn't say "Pydantic". This is for plain data and config validation; for validating an
+  LLM's output and building agents see pydantic-ai, and for Hydra config composition see
+  hydra-config.
 ---
 
-# Pydantic Strict Skill
+# Pydantic Skill
 
-You are writing configuration and data validation code using Pydantic V2 with strict typing. Follow these patterns exactly.
-
-## Core Philosophy
-
-All configuration in AI/CV projects must be validated at load time, not at runtime deep inside training loops. Pydantic V2 provides three levels of strictness depending on the use case. Every config, every data structure, every API payload uses Pydantic.
+Configuration and data validation with Pydantic V2 and strict typing. Validate all config at load time, never inside training loops. Every config, data structure, and API payload uses Pydantic.
 
 ## Level 1: Immutable Configuration (Frozen Models)
 
@@ -29,15 +29,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class DataConfig(BaseModel):
-    """Configuration for data loading and preprocessing.
-
-    Attributes:
-        data_dir: Path to the dataset root directory.
-        batch_size: Number of samples per batch.
-        num_workers: Number of dataloader worker processes.
-        image_size: Target image dimensions (height, width).
-        pin_memory: Whether to pin memory for GPU transfer.
-    """
+    """Configuration for data loading and preprocessing."""
 
     model_config = {"frozen": True, "extra": "forbid"}
 
@@ -71,14 +63,7 @@ class DataConfig(BaseModel):
 
 
 class ModelConfig(BaseModel):
-    """Configuration for model architecture.
-
-    Attributes:
-        backbone: Name of the backbone network.
-        num_classes: Number of output classes.
-        pretrained: Whether to use pretrained weights.
-        dropout: Dropout rate for regularization.
-    """
+    """Configuration for model architecture."""
 
     model_config = {"frozen": True, "extra": "forbid"}
 
@@ -89,14 +74,7 @@ class ModelConfig(BaseModel):
 
 
 class OptimizerConfig(BaseModel):
-    """Configuration for the optimizer.
-
-    Attributes:
-        name: Optimizer name (adam, adamw, sgd).
-        learning_rate: Initial learning rate.
-        weight_decay: L2 regularization factor.
-        momentum: Momentum for SGD optimizer.
-    """
+    """Configuration for the optimizer."""
 
     model_config = {"frozen": True, "extra": "forbid"}
 
@@ -156,16 +134,7 @@ from pydantic import BaseModel, Field
 
 
 class TrainingMetrics(BaseModel):
-    """Mutable metrics tracked during training.
-
-    Attributes:
-        epoch: Current epoch number.
-        train_loss: Running training loss.
-        val_loss: Running validation loss.
-        best_val_loss: Best validation loss seen so far.
-        learning_rate: Current learning rate.
-        samples_processed: Total number of samples processed.
-    """
+    """Mutable metrics tracked during training."""
 
     model_config = {"extra": "forbid"}
 
@@ -187,14 +156,7 @@ class TrainingMetrics(BaseModel):
 
 
 class DetectionResult(BaseModel):
-    """Single object detection result.
-
-    Attributes:
-        class_id: Predicted class index.
-        class_name: Human-readable class name.
-        confidence: Detection confidence score.
-        bbox: Bounding box as (x1, y1, x2, y2).
-    """
+    """Single object detection result. bbox is (x1, y1, x2, y2)."""
 
     model_config = {"extra": "forbid"}
 
@@ -215,14 +177,7 @@ class DetectionResult(BaseModel):
 
 
 class FrameDetections(BaseModel):
-    """All detections in a single frame.
-
-    Attributes:
-        frame_id: Frame index in the video.
-        timestamp: Frame timestamp in seconds.
-        detections: List of detection results.
-        processing_time_ms: Time to process this frame.
-    """
+    """All detections in a single frame."""
 
     model_config = {"extra": "forbid"}
 
@@ -264,18 +219,7 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class AugmentationConfig(BaseModel):
-    """Augmentation pipeline configuration.
-
-    Supports loading from either a dict or a path to a YAML file.
-    If a string path is provided, it loads and parses the YAML file.
-
-    Attributes:
-        horizontal_flip_prob: Probability of horizontal flip.
-        vertical_flip_prob: Probability of vertical flip.
-        rotation_limit: Maximum rotation angle in degrees.
-        brightness_limit: Maximum brightness adjustment.
-        contrast_limit: Maximum contrast adjustment.
-    """
+    """Augmentation config. Loads from a dict or a path to a YAML file."""
 
     model_config = {"frozen": True, "extra": "forbid"}
 
@@ -302,15 +246,7 @@ class AugmentationConfig(BaseModel):
 
 
 class ExperimentConfig(BaseModel):
-    """Experiment configuration with automatic defaults based on task.
-
-    Attributes:
-        task: Type of CV task.
-        backbone: Model backbone.
-        image_size: Input image dimensions.
-        batch_size: Training batch size.
-        augmentation: Augmentation config (or path to YAML file).
-    """
+    """Experiment configuration with automatic defaults based on task."""
 
     model_config = {"frozen": True, "extra": "forbid"}
 
@@ -431,17 +367,11 @@ class FullConfig(BaseModel):
 ### Usage Example
 
 ```python
-# Load from YAML file
+# Load from YAML, optionally with dot-notation overrides
 config = FullConfig.from_yaml("configs/experiment/baseline.yaml")
-
-# Load with command-line overrides
 config = FullConfig.from_yaml_with_overrides(
     "configs/experiment/baseline.yaml",
-    overrides={
-        "optimizer.lr": 5e-4,
-        "data.batch_size": 64,
-        "max_epochs": 200,
-    },
+    overrides={"optimizer.lr": 5e-4, "data.batch_size": 64, "max_epochs": 200},
 )
 
 # Access nested values with full type safety
@@ -449,67 +379,8 @@ print(config.optimizer.learning_rate)  # float
 print(config.data.image_size)          # tuple[int, int]
 ```
 
-## Config File Loading Patterns
-
-### YAML Config File
-
-```yaml
-# configs/experiment/baseline.yaml
-data:
-  data_dir: /data/imagenet
-  batch_size: 32
-  num_workers: 8
-  image_size: [224, 224]
-
-model:
-  backbone: resnet50
-  num_classes: 1000
-  pretrained: true
-
-optimizer:
-  name: adamw
-  lr: 0.001
-  weight_decay: 0.01
-
-scheduler:
-  name: cosine
-  warmup_epochs: 5
-  min_lr: 0.000001
-
-max_epochs: 100
-seed: 42
-```
-
-### Environment-Specific Overrides
-
-```python
-"""Load config with environment-specific overrides."""
-
-from __future__ import annotations
-
-import os
-from pathlib import Path
-
-
-def load_config(base_path: str = "configs/experiment/baseline.yaml") -> FullConfig:
-    """Load config with environment-appropriate defaults."""
-    env = os.getenv("ENVIRONMENT", "development")
-
-    config = FullConfig.from_yaml(base_path)
-
-    # Override for CI environments
-    if env == "ci":
-        config = FullConfig.from_yaml_with_overrides(
-            base_path,
-            overrides={
-                "data.num_workers": 2,
-                "data.batch_size": 4,
-                "max_epochs": 1,
-            },
-        )
-
-    return config
-```
+The matching YAML has top-level `data`, `model`, `optimizer`, `scheduler` keys
+mirroring the sub-config field names (use `lr` alias under `optimizer`).
 
 ## Testing Pydantic Configs
 

@@ -1,9 +1,13 @@
 ---
 name: docker-cv
 description: >
-  Build optimized Docker images for computer vision and deep learning workloads.
-  Covers CUDA support, multi-stage builds, layer caching, security best practices,
-  and GPU-accelerated container deployment.
+  Use this skill when writing or optimizing a Dockerfile for computer vision or deep
+  learning — CUDA/GPU base images, multi-stage builds, layer caching, slim inference
+  images, non-root security, and shrinking bloated CV images. Reach for it any time
+  you'd otherwise hand-write a GPU Dockerfile or debug a container that won't see the
+  GPU, even if the user just says "containerize this model". For deploying the resulting
+  containers to a cluster see kubernetes; for cloud image registries see gcp and
+  aws-sagemaker.
 ---
 
 # Docker CV Skill

@@ -113,7 +113,7 @@ onnx.save(slimmed, "model.onnx")
 
 - **PyTorch Lightning** -- Export from trained LightningModule checkpoints
 - **Docker CV** -- ONNX Runtime inference containers
-- **Pydantic Strict** -- Validated request/response schemas around inference
+- **Pydantic** -- Validated request/response schemas around inference
 - **Testing** -- Numerical equivalence tests between PyTorch and ONNX
 
 ## Full Reference

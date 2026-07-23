@@ -1,61 +1,28 @@
 ---
 name: tensorrt
 description: >
-  Maximize inference performance on NVIDIA GPUs by converting ONNX models to TensorRT
-  engines. Covers precision modes (FP16/INT8), dynamic shapes, engine building,
-  calibration, benchmarking, and Triton Inference Server deployment.
+  Use this skill when maximizing inference throughput and latency on NVIDIA GPUs by
+  converting ONNX models to TensorRT engines — FP16/INT8 precision modes, dynamic shapes,
+  engine building with trtexec or the Python API, INT8 calibration, benchmarking, and
+  Triton Inference Server deployment. Reach for it any time NVIDIA-GPU inference must be
+  squeezed to the limit, even if the user just says "make inference faster on the GPU".
+  Assumes an ONNX model already exists — see onnx to produce one first.
 ---
 
 # TensorRT Skill
 
-Maximize inference performance on NVIDIA GPUs by converting ONNX models to TensorRT engines. This skill requires the ONNX skill — always export and slim with ONNX first, then convert to TensorRT.
+Maximize inference performance on NVIDIA GPUs by converting ONNX models to TensorRT engines (typically 2-6x faster than ONNX Runtime CUDA via kernel auto-tuning, layer fusion, and FP16/INT8 precision). Requires the ONNX skill — TensorRT does not consume PyTorch directly.
 
-## Prerequisites: ONNX First
-
-TensorRT does not consume PyTorch models directly. The required pipeline is:
-
-```
-PyTorch model
-  → torch.onnx.export()          (ONNX skill)
-  → onnxslim.slim()              (ONNX skill)
-  → trtexec / tensorrt.Builder   (this skill)
-  → .engine file for deployment
-```
-
-Never skip the ONNX export and slimming steps. A slimmed ONNX model produces a better TensorRT engine because redundant ops are already removed before TensorRT's own optimizer runs.
-
-## Why TensorRT
-
-ONNX Runtime with CUDAExecutionProvider is good. TensorRT is better when you need maximum throughput on NVIDIA hardware:
-
-- **2-6x faster** than ONNX Runtime CUDA on the same GPU
-- **Kernel auto-tuning** — selects the fastest kernel for each layer on your specific GPU
-- **Layer fusion** — combines convolution + batch norm + activation into a single kernel
-- **Precision calibration** — FP16 and INT8 inference with minimal accuracy loss
-- **Memory optimization** — minimizes GPU memory allocations and data transfers
-- **Dynamic shapes** — supports variable batch sizes and image dimensions
-
-The tradeoff: TensorRT engines are GPU-specific (an engine built on A100 will not run on T4) and take minutes to build. Use TensorRT when you deploy to known NVIDIA hardware and need the lowest latency.
+Pipeline: `torch.onnx.export()` → `onnxslim.slim()` (ONNX skill) → `trtexec`/`tensorrt.Builder` (this skill) → `.engine`. Always slim before conversion; redundant ops removed early produce a better engine. Engines are GPU-architecture-specific (an A100 engine won't run on a T4) and take minutes to build — use TensorRT when deploying to known NVIDIA hardware for lowest latency.
 
 ## Installation
 
 ```bash
-# Install TensorRT via pip (requires CUDA toolkit)
-pip install tensorrt
-
-# Or via pixi (conda-forge)
-# pixi add tensorrt
-
-# Verify installation
+pixi add tensorrt   # requires a matching CUDA toolkit
 python -c "import tensorrt; print(tensorrt.__version__)"
 ```
 
-TensorRT requires a matching CUDA version. Check compatibility:
-
-| TensorRT | CUDA | cuDNN |
-|----------|------|-------|
-| 10.x | 12.x | 9.x |
-| 8.6 | 11.8 / 12.x | 8.9 |
+CUDA compatibility: TensorRT 10.x → CUDA 12.x / cuDNN 9.x; TensorRT 8.6 → CUDA 11.8 or 12.x / cuDNN 8.9.
 
 ## Building Engines with trtexec (CLI)
 
@@ -108,19 +75,8 @@ trtexec \
 ### Benchmarking with trtexec
 
 ```bash
-# Benchmark throughput and latency
-trtexec \
-    --onnx=model.onnx \
-    --fp16 \
-    --iterations=1000 \
-    --warmUp=500 \
-    --avgRuns=100
-
-# Output includes:
-# - Throughput (inferences/sec)
-# - Latency (min, max, mean, median, p99)
-# - GPU compute time
-# - Host latency (end-to-end)
+# Reports throughput, latency percentiles, GPU compute time, and host latency
+trtexec --onnx=model.onnx --fp16 --iterations=1000 --warmUp=500 --avgRuns=100
 ```
 
 ## Building Engines with Python API
@@ -180,56 +136,19 @@ def build_engine(
     logger.info("Engine saved to {} ({:.1f} MB)", engine_path, engine_path.stat().st_size / 1e6)
 ```
 
-### Dynamic Shape Builder
+### Dynamic Shapes
+
+Same builder as above, but add an optimization profile to the config before building. `opt_shape` should match your most common batch/resolution:
 
 ```python
-import tensorrt as trt
-
-from loguru import logger
-
-
-def build_engine_dynamic(
-    onnx_path: str,
-    engine_path: str,
-    fp16: bool = True,
-    min_shape: tuple[int, ...] = (1, 3, 320, 320),
-    opt_shape: tuple[int, ...] = (8, 3, 640, 640),
-    max_shape: tuple[int, ...] = (32, 3, 1280, 1280),
-    input_name: str = "input",
-) -> None:
-    """Build a TensorRT engine with dynamic input shapes."""
-    trt_logger = trt.Logger(trt.Logger.INFO)
-    builder = trt.Builder(trt_logger)
-    network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
-    parser = trt.OnnxParser(network, trt_logger)
-
-    with open(onnx_path, "rb") as f:
-        if not parser.parse(f.read()):
-            for i in range(parser.num_errors):
-                logger.error("{}", parser.get_error(i))
-            raise RuntimeError("ONNX parse failed")
-
-    config = builder.create_builder_config()
-    config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, 4 << 30)
-
-    if fp16:
-        config.set_flag(trt.BuilderFlag.FP16)
-
-    # Create optimization profile for dynamic shapes
-    profile = builder.create_optimization_profile()
-    profile.set_shape(input_name, min_shape, opt_shape, max_shape)
-    config.add_optimization_profile(profile)
-
-    logger.info(
-        "Building engine: min={}, opt={}, max={}",
-        min_shape, opt_shape, max_shape,
-    )
-
-    serialized = builder.build_serialized_network(network, config)
-    with open(engine_path, "wb") as f:
-        f.write(serialized)
-
-    logger.info("Engine saved to {}", engine_path)
+profile = builder.create_optimization_profile()
+profile.set_shape(
+    "input",
+    min=(1, 3, 320, 320),
+    opt=(8, 3, 640, 640),
+    max=(32, 3, 1280, 1280),
+)
+config.add_optimization_profile(profile)
 ```
 
 ## Inference with TensorRT
@@ -281,38 +200,26 @@ class TensorRTInference:
             self.context.set_tensor_address(name, device_mem)
 
     def predict(self, input_array: np.ndarray) -> np.ndarray:
-        """Run inference on a single input."""
-        # Copy input to device
         cudart.cudaMemcpy(
-            self.inputs[0]["device"],
-            input_array.ctypes.data,
-            input_array.nbytes,
+            self.inputs[0]["device"], input_array.ctypes.data, input_array.nbytes,
             cudart.cudaMemcpyKind.cudaMemcpyHostToDevice,
         )
-
-        # Execute
         self.context.execute_async_v3(0)
-
-        # Copy output from device
         output = np.empty(self.outputs[0]["shape"], dtype=self.outputs[0]["dtype"])
         cudart.cudaMemcpy(
-            output.ctypes.data,
-            self.outputs[0]["device"],
-            output.nbytes,
+            output.ctypes.data, self.outputs[0]["device"], output.nbytes,
             cudart.cudaMemcpyKind.cudaMemcpyDeviceToHost,
         )
-
         return output
 
     def __del__(self) -> None:
-        """Free GPU memory."""
         for buf in self.inputs + self.outputs:
             cudart.cudaFree(buf["device"])
 ```
 
 ### Using ONNX Runtime with TensorRT Backend
 
-If you want TensorRT performance without managing raw CUDA memory, use ONNX Runtime's TensorRT execution provider:
+Recommended for most projects: TensorRT performance without managing raw CUDA memory. ONNX Runtime handles engine building/caching and falls back to CUDA or CPU for unsupported layers.
 
 ```python
 import onnxruntime as ort
@@ -323,11 +230,6 @@ def create_tensorrt_session(
     fp16: bool = True,
     max_workspace_size: int = 4 * 1024 * 1024 * 1024,
 ) -> ort.InferenceSession:
-    """Create an ONNX Runtime session with TensorRT backend.
-
-    This is the simplest way to use TensorRT — ONNX Runtime handles
-    engine building and caching automatically.
-    """
     providers = [
         (
             "TensorrtExecutionProvider",
@@ -343,26 +245,17 @@ def create_tensorrt_session(
         "CPUExecutionProvider",
     ]
 
-    session = ort.InferenceSession(onnx_path, providers=providers)
-    return session
+    return ort.InferenceSession(onnx_path, providers=providers)
 ```
-
-This approach is recommended for most projects — it gives TensorRT performance with the ONNX Runtime API you already know, and automatically falls back to CUDA or CPU if TensorRT cannot handle a layer.
 
 ## INT8 Calibration
 
-INT8 provides the fastest inference but requires calibration data to preserve accuracy.
-
-### Calibration with trtexec
+INT8 gives the fastest inference but requires calibration data to preserve accuracy.
 
 ```bash
 # Generate calibration cache from a dataset
-trtexec \
-    --onnx=model.onnx \
-    --saveEngine=model_int8.engine \
-    --int8 \
-    --calib=calibration_cache.bin \
-    --calibBatchSize=32
+trtexec --onnx=model.onnx --saveEngine=model_int8.engine \
+    --int8 --calib=calibration_cache.bin --calibBatchSize=32
 ```
 
 ### Python Calibration
@@ -452,53 +345,8 @@ class TensorRTBuildConfig(BaseModel, frozen=True):
 
 
 class TensorRTInferenceConfig(BaseModel, frozen=True):
-    """TensorRT inference configuration."""
-
     engine_path: str = Field(description="Path to compiled engine")
     device_id: int = Field(default=0, ge=0)
-```
-
-```yaml
-# configs/tensorrt.yaml
-tensorrt:
-  onnx_path: models/model.onnx
-  engine_path: models/model.engine
-  fp16: true
-  int8: false
-  max_workspace_gb: 4
-  max_batch_size: 8
-  min_shape: [1, 3, 640, 640]
-  opt_shape: [8, 3, 640, 640]
-  max_shape: [32, 3, 640, 640]
-```
-
-## Integration with pixi
-
-```toml
-# pixi.toml — TensorRT tasks
-[tasks]
-# Full export pipeline: PyTorch → ONNX → OnnxSlim → TensorRT
-export-onnx = "python -m my_project.export --format onnx"
-export-trt = { cmd = "python -m my_project.export --format tensorrt", depends-on = ["export-onnx"] }
-
-# Build engine with trtexec
-trt-build = """trtexec \
-    --onnx=models/model.onnx \
-    --saveEngine=models/model.engine \
-    --fp16"""
-
-trt-build-dynamic = """trtexec \
-    --onnx=models/model.onnx \
-    --saveEngine=models/model.engine \
-    --fp16 \
-    --minShapes=input:1x3x640x640 \
-    --optShapes=input:8x3x640x640 \
-    --maxShapes=input:32x3x640x640"""
-
-trt-benchmark = """trtexec \
-    --loadEngine=models/model.engine \
-    --iterations=1000 \
-    --warmUp=500"""
 ```
 
 ## Benchmarking: ONNX Runtime vs TensorRT
@@ -570,40 +418,38 @@ FROM nvcr.io/nvidia/tensorrt:24.08-py3
 
 WORKDIR /app
 
-# Install project dependencies
-COPY pixi.toml pixi.lock ./
-RUN pip install --no-cache-dir -r requirements-inference.txt
+RUN curl -fsSL https://pixi.sh/install.sh | bash
+ENV PATH="/root/.pixi/bin:${PATH}"
 
-# Copy model and application
+COPY pixi.toml pixi.lock ./
+RUN pixi install
+
 COPY models/ models/
 COPY src/ src/
 
-# Build TensorRT engine at container startup (GPU-specific)
-# Or copy a pre-built engine for the target GPU
-ENTRYPOINT ["python", "-m", "my_project.serve"]
+# Build the engine at startup (GPU-specific) or COPY a pre-built engine for the target GPU
+ENTRYPOINT ["pixi", "run", "python", "-m", "my_project.serve"]
 ```
 
-Note: TensorRT engines are GPU-architecture-specific. An engine built on A100 will not work on T4. Either build engines at container startup or build separate images per GPU target.
+Engines are GPU-architecture-specific — build at container startup or ship separate images per GPU target.
 
 ## Best Practices
 
-1. **Always export to ONNX first** — use the ONNX skill pipeline (export → slim → validate) before TensorRT conversion.
-2. **Use FP16 as the default precision** — it halves memory usage with negligible accuracy loss on most models.
-3. **Use ONNX Runtime TensorRT EP for simplicity** — it manages engine building and caching automatically; use raw TensorRT API only when you need maximum control.
-4. **Cache built engines** — engine builds are slow (minutes); cache them by GPU architecture and rebuild only when the model changes.
-5. **Set dynamic shapes with realistic profiles** — `opt_shape` should match your most common batch size and resolution.
-6. **Validate accuracy after conversion** — compare TensorRT outputs against ONNX/PyTorch to catch precision issues.
-7. **Profile with `trtexec`** — use `--dumpProfile` to identify slow layers.
-8. **Pin TensorRT and CUDA versions** — document the exact versions in your Dockerfile and README.
-9. **Use INT8 only with calibration data** — uncalibrated INT8 can cause significant accuracy loss.
-10. **Build per-GPU-architecture** — engines are not portable across GPU architectures (e.g., A100 vs T4).
+1. **Export to ONNX first** — run the ONNX skill pipeline (export → slim → validate) before conversion.
+2. **Default to FP16** — halves memory with negligible accuracy loss on most models.
+3. **Prefer the ONNX Runtime TensorRT EP** — it manages engine building/caching automatically; use the raw API only for maximum control.
+4. **Cache built engines** by GPU architecture; rebuild only when the model changes.
+5. **Set realistic dynamic profiles** — `opt_shape` should match your most common batch/resolution.
+6. **Validate accuracy after conversion** against ONNX/PyTorch outputs.
+7. **Profile with `trtexec --dumpProfile`** to find slow layers.
+8. **Pin TensorRT and CUDA versions** in the Dockerfile and README.
+9. **Use INT8 only with calibration data** — uncalibrated INT8 loses significant accuracy.
 
-## Anti-Patterns to Avoid
+## Anti-Patterns
 
-- ❌ Exporting PyTorch directly to TensorRT without going through ONNX — use the ONNX skill pipeline first.
-- ❌ Deploying raw ONNX models to TensorRT without running `onnxslim.slim()` — slimming removes redundant ops that confuse the TensorRT optimizer.
-- ❌ Assuming TensorRT engines are portable — they are tied to the GPU architecture and TensorRT version they were built on.
-- ❌ Using INT8 without calibration data — this causes significant accuracy degradation.
-- ❌ Setting `max_workspace_size` too low — TensorRT needs workspace memory for kernel auto-tuning; start with 4 GB.
-- ❌ Skipping warmup in benchmarks — the first few inferences include JIT compilation and memory allocation overhead.
-- ❌ Using TensorRT on CPUs or non-NVIDIA GPUs — it only runs on NVIDIA hardware; use ONNX Runtime for cross-platform deployment.
+- ❌ Exporting PyTorch straight to TensorRT without ONNX + `onnxslim.slim()` first — slimming removes ops that confuse the optimizer.
+- ❌ Assuming engines are portable — they are tied to the GPU architecture and TensorRT version.
+- ❌ Using INT8 without calibration data.
+- ❌ Setting `max_workspace_size` too low — TensorRT needs workspace for kernel auto-tuning; start with 4 GB.
+- ❌ Skipping benchmark warmup — the first inferences include JIT compilation and allocation overhead.
+- ❌ Using TensorRT on CPUs or non-NVIDIA GPUs — use ONNX Runtime for cross-platform deployment.

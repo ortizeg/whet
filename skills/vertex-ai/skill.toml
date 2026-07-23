@@ -1,0 +1,13 @@
+[skill]
+name = "vertex-ai"
+version = "1.0.0"
+category = "cloud"
+tags = ["gcp", "vertex-ai", "training", "gpu", "cloud", "pipelines"]
+
+[dependencies]
+requires = []
+recommends = ["gcp", "docker-cv", "wandb"]
+
+[compatibility]
+python = ">=3.11"
+libraries = { google-cloud-aiplatform = ">=1.60" }

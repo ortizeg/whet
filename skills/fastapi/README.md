@@ -25,7 +25,7 @@ When you need to serve ML models over HTTP — whether for batch predictions, re
 
 ## Related Skills
 
-- **[Pydantic Strict](../pydantic-strict/)** — frozen BaseModel patterns used for all API schemas.
+- **[Pydantic](../pydantic/)** — frozen BaseModel patterns used for all API schemas.
 - **[ONNX](../onnx/)** / **[TensorRT](../tensorrt/)** — optimized model formats loaded in the lifespan handler.
 - **[Docker CV](../docker-cv/)** — production containerization for FastAPI ML services.
 - **[Loguru](../loguru/)** — structured logging in middleware and exception handlers.

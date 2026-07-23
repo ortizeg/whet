@@ -1,9 +1,12 @@
 ---
 name: tensorboard
 description: >
-  TensorBoard visualization and logging for PyTorch ML projects. Covers scalar
-  metrics, image logging, model graph visualization, histogram tracking, profiling,
-  and zero-setup local experiment monitoring.
+  Use this skill when logging and visualizing PyTorch training locally with TensorBoard —
+  scalar metrics, image logging, model-graph visualization, histogram tracking,
+  profiling, and zero-setup local experiment monitoring. Reach for it any time you want a
+  quick local training dashboard without a hosted service, even if the user just says
+  "let me watch the loss" or "log the metrics somewhere". For hosted, collaborative
+  tracking with sweeps and a model registry, see wandb or mlflow.
 ---
 
 # TensorBoard Logging for ML Projects

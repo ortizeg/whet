@@ -5,7 +5,7 @@ category = "cv-ml"
 tags = ["transformers", "datasets", "fine-tuning", "pretrained", "nlp", "vision"]
 
 [dependencies]
-requires = ["pydantic-strict", "loguru"]
+requires = ["pydantic", "loguru"]
 recommends = ["pytorch-lightning", "wandb", "onnx", "fastapi"]
 
 [compatibility]

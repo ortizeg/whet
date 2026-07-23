@@ -22,6 +22,7 @@ Standardizes GitHub repository initialization and configuration for CV/ML projec
 - Squash merge as default strategy
 - Full setup automation script
 - Pydantic configuration model for repo settings
+- Follow gitflow workflow
 
 ## Related Skills
 

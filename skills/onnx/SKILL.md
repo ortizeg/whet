@@ -1,59 +1,22 @@
 ---
 name: onnx
 description: >
-  Export PyTorch models to ONNX format for optimized inference with ONNX Runtime.
-  Covers dynamic axes configuration, model optimization, graph surgery, validation
-  against PyTorch outputs, and production deployment patterns.
+  Use this skill when exporting a PyTorch model to ONNX or running inference with ONNX
+  Runtime — configuring dynamic axes, optimizing and slimming the graph, graph surgery,
+  validating ONNX outputs against PyTorch, quantization, and selecting execution
+  providers. Reach for it any time a model needs to leave PyTorch for portable or
+  optimized cross-platform inference, even if the user just says "export the model" or
+  "run it without torch". For squeezing maximum NVIDIA-GPU performance out of the ONNX
+  file, see tensorrt.
 ---
 
 # ONNX Model Export and Inference
 
-## Overview
-
-ONNX (Open Neural Network Exchange) is an open standard format for representing machine learning models. It enables interoperability between different ML frameworks by providing a common representation. In practice, ONNX is most often used to export trained PyTorch models for optimized inference using ONNX Runtime, which delivers significant speedups over native PyTorch inference. This skill covers exporting PyTorch models, configuring dynamic axes, running inference with ONNX Runtime, optimization, validation, and deployment.
-
-## Why Use ONNX
-
-PyTorch is excellent for training but not optimized for production inference. ONNX Runtime provides:
-
-- **2-10x faster inference** compared to native PyTorch on the same hardware.
-- **Hardware-agnostic deployment** across CPU, GPU, mobile, and edge devices.
-- **Graph optimization** including operator fusion, constant folding, and memory planning.
-- **Quantization support** for INT8 inference with minimal accuracy loss.
-- **Framework independence**: deploy without a PyTorch dependency.
-- **Standardized format** supported by major cloud providers and edge platforms.
+Export trained PyTorch models to ONNX for optimized inference with ONNX Runtime (typically 2-10x faster, hardware-agnostic, no PyTorch dependency at deploy time).
 
 ## Exporting PyTorch Models to ONNX
 
-### Basic Export
-
-```python
-import torch
-import onnx
-
-def export_model_basic(
-    model: torch.nn.Module,
-    output_path: str,
-    input_shape: tuple[int, ...] = (1, 3, 640, 640),
-) -> None:
-    """Export a PyTorch model to ONNX format."""
-    model.eval()
-    dummy_input = torch.randn(*input_shape)
-
-    torch.onnx.export(
-        model,
-        dummy_input,
-        output_path,
-        opset_version=17,
-        input_names=["input"],
-        output_names=["output"],
-    )
-
-    # Validate the exported model
-    onnx_model = onnx.load(output_path)
-    onnx.checker.check_model(onnx_model)
-    print(f"Model exported and validated: {output_path}")
-```
+Always call `model.eval()` before export, run `onnx.checker.check_model()` to validate, and use `opset_version=17`+ for modern architectures.
 
 ### Export with Pydantic Configuration
 
@@ -86,11 +49,8 @@ def export_to_onnx(
         output_names=config.output_names,
         dynamic_axes=config.dynamic_axes,
     )
-    # Validate
-    onnx_model = onnx.load(output_path)
-    onnx.checker.check_model(onnx_model)
+    onnx.checker.check_model(onnx.load(output_path))
 
-# Usage
 config = ONNXExportConfig(
     opset_version=17,
     dynamic_axes={
@@ -98,8 +58,7 @@ config = ONNXExportConfig(
         "output": {0: "batch_size"},
     },
 )
-dummy_input = torch.randn(1, 3, 640, 640)
-export_to_onnx(model, dummy_input, "model.onnx", config)
+export_to_onnx(model, torch.randn(1, 3, 640, 640), "model.onnx", config)
 ```
 
 ## Dynamic Axes Configuration
@@ -126,14 +85,6 @@ dynamic_axes = {
     "input": {0: "batch_size", 1: "sequence_length"},
     "output": {0: "batch_size", 1: "sequence_length"},
 }
-
-# Multiple inputs/outputs
-dynamic_axes = {
-    "image": {0: "batch_size", 2: "height", 3: "width"},
-    "mask": {0: "batch_size", 2: "height", 3: "width"},
-    "boxes": {0: "batch_size", 1: "num_detections"},
-    "scores": {0: "batch_size", 1: "num_detections"},
-}
 ```
 
 ## Input and Output Specifications
@@ -159,12 +110,7 @@ def inspect_model(model_path: str) -> None:
         dtype = onnx.TensorProto.DataType.Name(out.type.tensor_type.elem_type)
         print(f"  {out.name}: {shape} ({dtype})")
 
-# Usage
 inspect_model("model.onnx")
-# Inputs:
-#   input: ['batch_size', 3, 640, 640] (FLOAT)
-# Outputs:
-#   output: ['batch_size', 100, 6] (FLOAT)
 ```
 
 ### Multiple Inputs and Outputs
@@ -228,11 +174,8 @@ class ONNXInferenceSession:
         """Run inference returning all outputs."""
         return self.session.run(None, {self.input_name: input_array})
 
-# Usage
 session = ONNXInferenceSession("model.onnx")
-image = np.random.randn(1, 3, 640, 640).astype(np.float32)
-output = session.predict(image)
-print(f"Output shape: {output.shape}")
+output = session.predict(np.random.randn(1, 3, 640, 640).astype(np.float32))
 ```
 
 ### Configuring Execution Providers
@@ -293,12 +236,7 @@ session = ort.InferenceSession(
 
 ### OnnxSlim (Required)
 
-OnnxSlim is a required post-export step. It reduces operators, removes redundant nodes, and folds constants — producing smaller, faster models without accuracy loss. Always slim after export, before quantization or deployment.
-
-```bash
-# Install
-pip install onnxslim
-```
+OnnxSlim is a required post-export step: it reduces operators, removes redundant nodes, and folds constants — smaller/faster models without accuracy loss. Always slim after export, before quantization or deployment (`pixi add onnxslim`).
 
 #### Python API
 
@@ -331,66 +269,18 @@ def export_and_slim(
         },
     )
 
-    # Slim the exported model
-    raw_model = onnx.load(raw_path)
-    slimmed_model = onnxslim.slim(raw_model)
+    slimmed_model = onnxslim.slim(onnx.load(raw_path))
     onnx.save(slimmed_model, output_path)
-
-    # Validate
     onnx.checker.check_model(onnx.load(output_path))
 ```
 
-#### CLI
+CLI equivalent: `onnxslim model_raw.onnx model.onnx`
 
-```bash
-# Slim a model from the command line
-onnxslim model_raw.onnx model.onnx
-```
-
-#### Standard Export Pipeline
-
-The required order for ONNX export is:
-
-```
-1. torch.onnx.export()     → raw ONNX graph
-2. onnxslim.slim()         → cleaned, optimized graph
-3. onnx.checker.check_model() → validate
-4. (optional) quantize     → INT8/FP16
-5. (optional) benchmark    → verify speedup
-```
-
-```python
-import onnx
-import onnxslim
-
-# ✅ Always slim before quantization or deployment
-raw_model = onnx.load("model_raw.onnx")
-slimmed = onnxslim.slim(raw_model)
-onnx.save(slimmed, "model.onnx")
-
-# ❌ Do not deploy raw exported models — they contain redundant ops
-# ❌ Do not quantize before slimming — slimming enables better quantization
-```
+Required export order: `torch.onnx.export()` → `onnxslim.slim()` → `onnx.checker.check_model()` → (optional) quantize → (optional) benchmark. Never deploy raw exported models or quantize before slimming.
 
 ### ORT Graph Optimization
 
-ONNX Runtime also performs graph optimizations at session creation. This is complementary to OnnxSlim — use both.
-
-```python
-import onnxruntime as ort
-
-# Optimize and save the model
-session_options = ort.SessionOptions()
-session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-session_options.optimized_model_filepath = "model_optimized.onnx"
-
-# Create session (triggers optimization and saves)
-session = ort.InferenceSession(
-    "model.onnx",  # Use the slimmed model
-    sess_options=session_options,
-    providers=["CPUExecutionProvider"],
-)
-```
+ONNX Runtime also optimizes at session creation (complementary to OnnxSlim — use both). Set `session_options.graph_optimization_level = ORT_ENABLE_ALL` and `session_options.optimized_model_filepath = "model_optimized.onnx"` to persist the optimized graph.
 
 ### Quantization
 
@@ -436,12 +326,10 @@ quantize_static(
 ### FP16 Conversion
 
 ```python
+import onnx
 from onnxconverter_common import float16
 
-import onnx
-
-model = onnx.load("model.onnx")
-model_fp16 = float16.convert_float_to_float16(model)
+model_fp16 = float16.convert_float_to_float16(onnx.load("model.onnx"))
 onnx.save(model_fp16, "model_fp16.onnx")
 ```
 
@@ -468,35 +356,24 @@ def validate_onnx_export(
     input_name = session.get_inputs()[0].name
 
     all_passed = True
-    for i in range(num_tests):
-        # Generate random input
+    for _ in range(num_tests):
         dummy_input = torch.randn(*input_shape)
-
-        # PyTorch inference
         with torch.no_grad():
             pytorch_output = pytorch_model(dummy_input).numpy()
-
-        # ONNX Runtime inference
         onnx_output = session.run(None, {input_name: dummy_input.numpy()})[0]
-
-        # Compare
         try:
             np.testing.assert_allclose(pytorch_output, onnx_output, atol=atol, rtol=rtol)
-            print(f"Test {i + 1}: PASSED (max diff: {np.max(np.abs(pytorch_output - onnx_output)):.2e})")
-        except AssertionError as e:
-            print(f"Test {i + 1}: FAILED - {e}")
+        except AssertionError:
             all_passed = False
 
     return all_passed
 
-# Usage
-is_valid = validate_onnx_export(model, "model.onnx")
-assert is_valid, "ONNX validation failed"
+assert validate_onnx_export(model, "model.onnx"), "ONNX validation failed"
 ```
 
 ## Serving with ONNX Runtime and FastAPI
 
-### FastAPI Integration
+Load the session once in a `lifespan` handler; keep it in module scope for reuse across requests.
 
 ```python
 from contextlib import asynccontextmanager
@@ -592,115 +469,25 @@ def benchmark_onnx(
         times.append((time.perf_counter() - start) * 1000)
 
     return {
-        "mean_ms": np.mean(times),
-        "std_ms": np.std(times),
-        "min_ms": np.min(times),
-        "max_ms": np.max(times),
-        "median_ms": np.median(times),
-        "p95_ms": np.percentile(times, 95),
-        "p99_ms": np.percentile(times, 99),
-        "throughput_fps": 1000.0 / np.mean(times),
+        "mean_ms": float(np.mean(times)),
+        "median_ms": float(np.median(times)),
+        "p95_ms": float(np.percentile(times, 95)),
+        "p99_ms": float(np.percentile(times, 99)),
+        "throughput_fps": 1000.0 / float(np.mean(times)),
     }
 
-# Usage
 results = benchmark_onnx("model.onnx", (1, 3, 640, 640))
-for metric, value in results.items():
-    print(f"{metric}: {value:.2f}")
 ```
 
-### Comparing PyTorch vs ONNX Performance
-
-```python
-import torch
-import time
-import numpy as np
-
-def benchmark_pytorch(model, input_shape, num_runs=100):
-    model.eval()
-    device = next(model.parameters()).device
-    dummy = torch.randn(*input_shape, device=device)
-
-    # Warmup
-    with torch.no_grad():
-        for _ in range(10):
-            model(dummy)
-
-    # Benchmark
-    times = []
-    with torch.no_grad():
-        for _ in range(num_runs):
-            start = time.perf_counter()
-            model(dummy)
-            if device.type == "cuda":
-                torch.cuda.synchronize()
-            times.append((time.perf_counter() - start) * 1000)
-
-    return {"mean_ms": np.mean(times), "throughput_fps": 1000 / np.mean(times)}
-
-# Compare
-pytorch_results = benchmark_pytorch(model, (1, 3, 640, 640))
-onnx_results = benchmark_onnx("model.onnx", (1, 3, 640, 640))
-speedup = pytorch_results["mean_ms"] / onnx_results["mean_ms"]
-print(f"ONNX speedup: {speedup:.2f}x")
-```
+To compute the ONNX speedup, run the same warmup/timed loop against the PyTorch model (calling `torch.cuda.synchronize()` after each forward pass on GPU) and divide the mean latencies.
 
 ## Common Pitfalls
 
-### 1. Missing Dynamic Axes
-
-Without dynamic axes, the model only accepts the exact input shape used during export:
-
-```python
-# BAD: Fixed batch size
-torch.onnx.export(model, dummy, "model.onnx")
-
-# GOOD: Dynamic batch size
-torch.onnx.export(model, dummy, "model.onnx",
-    dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}})
-```
-
-### 2. Unsupported Operations
-
-Some PyTorch operations are not supported in ONNX. Common workarounds:
-
-```python
-# BAD: torch.where with scalar
-output = torch.where(condition, 1.0, 0.0)
-
-# GOOD: Use tensors
-output = torch.where(condition, torch.ones_like(x), torch.zeros_like(x))
-```
-
-### 3. Data Type Mismatch
-
-ONNX Runtime expects `float32` by default:
-
-```python
-# BAD: Wrong dtype
-input_array = image.astype(np.float64)
-
-# GOOD: Correct dtype
-input_array = image.astype(np.float32)
-```
-
-### 4. Not Calling model.eval()
-
-Training-mode behaviors (dropout, batch norm) produce different results:
-
-```python
-# ALWAYS set eval mode before export
-model.eval()
-torch.onnx.export(model, dummy, "model.onnx")
-```
-
-### 5. Opset Version Too Low
-
-Newer operations require higher opset versions:
-
-```python
-# Use opset 17+ for modern architectures
-torch.onnx.export(model, dummy, "model.onnx", opset_version=17)
-```
+- **Missing dynamic axes** — without them the model only accepts the exact export shape; always pass `dynamic_axes` for batch size at minimum.
+- **Unsupported ops** — some PyTorch ops don't export. Prefer tensor forms, e.g. `torch.where(cond, torch.ones_like(x), torch.zeros_like(x))` over scalar args.
+- **Data type mismatch** — ONNX Runtime expects `float32`; cast inputs with `.astype(np.float32)`, not `float64`.
+- **Forgetting `model.eval()`** — training-mode dropout/batchnorm produce different outputs; always call before export.
+- **Opset too low** — use `opset_version=17`+ for modern architectures.
 
 ## Best Practices
 
@@ -714,7 +501,3 @@ torch.onnx.export(model, dummy, "model.onnx", opset_version=17)
 8. **Profile with ONNX Runtime** profiling tools to find bottlenecks.
 9. **Wrap ONNX inference** in a Pydantic-validated class for type safety.
 10. **Store ONNX models** as DVC-tracked artifacts, not in Git.
-
-## Summary
-
-ONNX provides a standardized path from PyTorch training to optimized production inference. By exporting models to ONNX format and running them with ONNX Runtime, projects achieve significant speedups with minimal code changes. The combination of graph optimization, quantization, and hardware-specific execution providers makes ONNX Runtime the recommended inference engine for deploying computer vision models in production.

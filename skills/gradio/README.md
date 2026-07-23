@@ -34,5 +34,5 @@ When you need to quickly build an interactive demo for a trained model -- whethe
 - **[PyTorch Lightning](../pytorch-lightning/)** -- load Lightning checkpoints and serve trained models through Gradio.
 - **[Testing](../testing/)** -- test Gradio components with the Gradio test client and pytest fixtures.
 - **[ONNX](../onnx/)** -- serve optimized ONNX models for low-latency Gradio inference.
-- **[Pydantic Strict](../pydantic-strict/)** -- frozen BaseModel patterns for all Gradio configuration objects.
+- **[Pydantic](../pydantic/)** -- frozen BaseModel patterns for all Gradio configuration objects.
 - **[Loguru](../loguru/)** -- structured logging in model loading, prediction callbacks, and flagging.

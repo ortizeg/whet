@@ -1,28 +1,21 @@
 ---
 name: fastapi
 description: >
-  FastAPI patterns for building ML model serving APIs. Covers async endpoints,
-  Pydantic request/response models, dependency injection, middleware, CORS,
+  Use this skill when building an HTTP API to serve an ML model — async prediction
+  endpoints, Pydantic request/response schemas, dependency injection, middleware, CORS,
   background tasks, WebSocket streaming, health checks, and structured error handling.
+  Reach for it any time you'd otherwise hand-roll a model-serving web service or expose
+  inference over REST, even if the user just says "put this model behind an API". For a
+  quick interactive demo UI instead of a production JSON API, see gradio.
 ---
 
 # FastAPI Skill
 
-You are building FastAPI applications for serving ML models and CV pipelines. Follow these patterns exactly.
+Build FastAPI applications for serving ML models and CV pipelines. Use Pydantic models for all request/response schemas — never accept raw dicts. Use an application factory for testable configuration and clean startup/shutdown lifecycle.
 
-## Core Philosophy
-
-FastAPI provides automatic OpenAPI documentation, request validation via Pydantic, and async-first design. Every model serving endpoint in this framework uses FastAPI. Use Pydantic models for all request and response schemas — never accept raw dicts from API consumers.
-
-## Application Structure
-
-### Standard Application Factory
-
-Use an application factory pattern to configure the FastAPI app. This enables testing with different configurations and clean startup/shutdown lifecycle management.
+## Application Factory
 
 ```python
-"""FastAPI application factory for ML model serving."""
-
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
@@ -36,8 +29,6 @@ from pydantic import BaseModel, Field
 
 
 class AppConfig(BaseModel, frozen=True):
-    """Application configuration."""
-
     title: str = "ML Model API"
     version: str = "1.0.0"
     cors_origins: list[str] = Field(default_factory=lambda: ["*"])
@@ -48,18 +39,14 @@ class AppConfig(BaseModel, frozen=True):
 
 class ModelRegistry:
     """Holds loaded models for the application lifetime."""
-
     def __init__(self) -> None:
         self.models: dict[str, Any] = {}
 
     async def load(self, config: AppConfig) -> None:
         logger.info("Loading model from {}", config.model_path)
-        # Load ONNX, TensorRT, or PyTorch model here
         self.models["default"] = await _load_model(config.model_path)
-        logger.info("Model loaded successfully")
 
     async def shutdown(self) -> None:
-        logger.info("Releasing model resources")
         self.models.clear()
 
 
@@ -92,7 +79,6 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
     from .routes import prediction, health
     app.include_router(health.router, tags=["health"])
     app.include_router(prediction.router, prefix="/api/v1", tags=["prediction"])
@@ -102,13 +88,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
 ## Request and Response Models
 
-### Pydantic Schemas for ML Endpoints
-
 Define explicit Pydantic models for every endpoint. Never use `dict` or `Any` in API signatures.
 
 ```python
-"""Pydantic schemas for prediction endpoints."""
-
 from __future__ import annotations
 
 import base64
@@ -120,9 +102,7 @@ class PredictionRequest(BaseModel, frozen=True):
     """Single image prediction request."""
 
     image_b64: str = Field(..., description="Base64-encoded image bytes")
-    confidence_threshold: float = Field(
-        default=0.5, ge=0.0, le=1.0, description="Minimum confidence for detections"
-    )
+    confidence_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
     max_detections: int = Field(default=100, ge=1, le=1000)
 
     @field_validator("image_b64")
@@ -136,64 +116,36 @@ class PredictionRequest(BaseModel, frozen=True):
 
 
 class Detection(BaseModel, frozen=True):
-    """Single object detection result."""
-
     label: str
     confidence: float = Field(ge=0.0, le=1.0)
     bbox: list[float] = Field(min_length=4, max_length=4, description="[x1, y1, x2, y2]")
 
 
 class PredictionResponse(BaseModel, frozen=True):
-    """Prediction response with detections and metadata."""
-
     detections: list[Detection]
     inference_time_ms: float
     model_version: str
 
 
-class BatchPredictionRequest(BaseModel, frozen=True):
-    """Batch prediction request."""
-
-    images: list[PredictionRequest] = Field(max_length=32)
-
-
-class BatchPredictionResponse(BaseModel, frozen=True):
-    """Batch prediction response."""
-
-    results: list[PredictionResponse]
-    total_inference_time_ms: float
-
-
 class ErrorResponse(BaseModel, frozen=True):
-    """Structured error response."""
-
     error: str
     detail: str | None = None
     request_id: str | None = None
 ```
 
-## Endpoint Patterns
+## Prediction Endpoint with Dependency Injection
 
-### Prediction Endpoint with Dependency Injection
+Inject the model and preprocessor via `Depends` — never load them inside the handler. For batch endpoints, accept a `list[PredictionRequest]` (cap with `Field(max_length=...)`) and loop this same logic.
 
 ```python
-"""Prediction routes."""
-
 from __future__ import annotations
 
 import time
 from typing import Annotated
 
-import numpy as np
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
-from .schemas import (
-    PredictionRequest,
-    PredictionResponse,
-    BatchPredictionRequest,
-    BatchPredictionResponse,
-    Detection,
-)
+from .schemas import PredictionRequest, PredictionResponse, Detection
 from .dependencies import get_model, get_preprocessor
 
 router = APIRouter()
@@ -224,35 +176,11 @@ async def predict(
         inference_time_ms=round(elapsed_ms, 2),
         model_version=model.version,
     )
-
-
-@router.post("/predict/batch", response_model=BatchPredictionResponse)
-async def predict_batch(
-    request: BatchPredictionRequest,
-    model: Annotated[Model, Depends(get_model)],
-    preprocessor: Annotated[Preprocessor, Depends(get_preprocessor)],
-) -> BatchPredictionResponse:
-    """Run inference on a batch of images."""
-    start = time.perf_counter()
-
-    results: list[PredictionResponse] = []
-    for item in request.images:
-        result = await predict(item, model, preprocessor)
-        results.append(result)
-
-    total_ms = (time.perf_counter() - start) * 1000
-
-    return BatchPredictionResponse(
-        results=results,
-        total_inference_time_ms=round(total_ms, 2),
-    )
 ```
 
 ### Health Check Endpoints
 
 ```python
-"""Health check routes."""
-
 from __future__ import annotations
 
 from fastapi import APIRouter
@@ -269,7 +197,7 @@ class HealthResponse(BaseModel, frozen=True):
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
-    """Liveness and readiness probe."""
+    """Liveness probe."""
     from .app import model_registry
 
     return HealthResponse(
@@ -281,7 +209,7 @@ async def health_check() -> HealthResponse:
 
 @router.get("/ready")
 async def readiness() -> dict[str, bool]:
-    """Kubernetes readiness probe."""
+    """Kubernetes readiness probe — 503 until the model is loaded."""
     from .app import model_registry
 
     if not model_registry.models:
@@ -291,11 +219,7 @@ async def readiness() -> dict[str, bool]:
 
 ## Dependency Injection
 
-### Model and Preprocessor Dependencies
-
 ```python
-"""FastAPI dependencies for ML serving."""
-
 from __future__ import annotations
 
 from functools import lru_cache
@@ -333,14 +257,12 @@ async def get_preprocessor(
 ### Request ID and Logging Middleware
 
 ```python
-"""Custom middleware for ML API."""
-
 from __future__ import annotations
 
 import time
 import uuid
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Request, Response
 from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -357,14 +279,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         elapsed = (time.perf_counter() - start) * 1000
 
         logger.info(
-            "{method} {path} → {status} ({elapsed:.1f}ms) [{rid}]",
-            method=request.method,
-            path=request.url.path,
-            status=response.status_code,
-            elapsed=elapsed,
-            rid=request_id,
+            "{} {} → {} ({:.1f}ms) [{}]",
+            request.method, request.url.path, response.status_code, elapsed, request_id,
         )
-
         response.headers["X-Request-ID"] = request_id
         return response
 ```
@@ -372,8 +289,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 ### Structured Exception Handlers
 
 ```python
-"""Exception handlers for consistent error responses."""
-
 from __future__ import annotations
 
 from fastapi import FastAPI, Request
@@ -382,7 +297,6 @@ from loguru import logger
 
 
 async def model_error_handler(request: Request, exc: ModelInferenceError) -> JSONResponse:
-    """Handle model inference failures."""
     logger.error("Inference error: {}", exc)
     return JSONResponse(
         status_code=500,
@@ -394,28 +308,13 @@ async def model_error_handler(request: Request, exc: ModelInferenceError) -> JSO
     )
 
 
-async def validation_error_handler(request: Request, exc: ValueError) -> JSONResponse:
-    """Handle input validation errors with clear messages."""
-    return JSONResponse(
-        status_code=422,
-        content={"error": "validation_error", "detail": str(exc)},
-    )
-
-
 def register_exception_handlers(app: FastAPI) -> None:
-    """Register all exception handlers on the app."""
     app.add_exception_handler(ModelInferenceError, model_error_handler)
 ```
 
-## WebSocket Streaming
-
-### Real-Time Video Inference
+## WebSocket Streaming (Real-Time Video Inference)
 
 ```python
-"""WebSocket endpoint for streaming inference."""
-
-from __future__ import annotations
-
 import base64
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -449,31 +348,18 @@ async def stream_inference(websocket: WebSocket) -> None:
         logger.info("WebSocket client disconnected")
 ```
 
-## Background Tasks
+## Background Tasks (Async Post-Processing)
 
-### Async Post-Processing
+Use `BackgroundTasks` to persist results or log after the response is sent, keeping request latency low.
 
 ```python
-"""Background task patterns for FastAPI ML APIs."""
-
-from __future__ import annotations
-
-from fastapi import APIRouter, BackgroundTasks
-from loguru import logger
-
-router = APIRouter()
+from fastapi import BackgroundTasks
 
 
-async def save_prediction_to_db(
-    request_id: str,
-    detections: list[Detection],
-) -> None:
-    """Save prediction results asynchronously after response."""
-    logger.info("Saving {} detections for request {}", len(detections), request_id)
-    await db.predictions.insert_one({
-        "request_id": request_id,
-        "detections": [d.model_dump() for d in detections],
-    })
+async def save_prediction_to_db(request_id: str, detections: list[Detection]) -> None:
+    await db.predictions.insert_one(
+        {"request_id": request_id, "detections": [d.model_dump() for d in detections]}
+    )
 
 
 @router.post("/predict")
@@ -481,25 +367,14 @@ async def predict_with_logging(
     request: PredictionRequest,
     background_tasks: BackgroundTasks,
 ) -> PredictionResponse:
-    """Predict and log results in background."""
     result = await run_prediction(request)
-
-    background_tasks.add_task(
-        save_prediction_to_db,
-        request_id=request.state.request_id,
-        detections=result.detections,
-    )
-
+    background_tasks.add_task(save_prediction_to_db, request.state.request_id, result.detections)
     return result
 ```
 
-## Testing FastAPI Applications
-
-### Async Test Client
+## Testing (Async Test Client)
 
 ```python
-"""Tests for prediction API."""
-
 from __future__ import annotations
 
 import base64
@@ -552,44 +427,27 @@ async def test_predict_rejects_invalid_base64(client: AsyncClient) -> None:
 
 ## Docker Deployment
 
-### Production Dockerfile for FastAPI ML API
+Production Dockerfile plus a Uvicorn runner for programmatic startup.
 
 ```dockerfile
 FROM python:3.11-slim AS base
 
 WORKDIR /app
-RUN pip install --no-cache-dir uv
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL https://pixi.sh/install.sh | bash
+ENV PATH="/root/.pixi/bin:${PATH}"
 
-COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev
+COPY pixi.toml pixi.lock ./
+RUN pixi install
 
 COPY src/ ./src/
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["pixi", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
 ```
 
-### Uvicorn Configuration
-
-```python
-"""Uvicorn runner with production settings."""
-
-import uvicorn
-
-if __name__ == "__main__":
-    uvicorn.run(
-        "app.main:create_app",
-        factory=True,
-        host="0.0.0.0",
-        port=8000,
-        workers=4,
-        log_level="info",
-        access_log=True,
-        limit_concurrency=100,
-        timeout_keep_alive=30,
-    )
-```
+For programmatic startup with the factory, use `uvicorn.run("app.main:create_app", factory=True, host="0.0.0.0", port=8000, workers=4, limit_concurrency=100, timeout_keep_alive=30)`.
 
 ## Anti-Patterns
 
@@ -602,8 +460,4 @@ if __name__ == "__main__":
 
 ## Integration with Other Skills
 
-- **Pydantic Strict** — All request/response models follow frozen BaseModel patterns.
-- **Docker CV** — Production Dockerfiles with multi-stage builds for FastAPI + model serving.
-- **ONNX / TensorRT** — Load optimized models in the lifespan handler.
-- **Loguru** — Structured logging in middleware and exception handlers.
-- **Testing** — Async test client with httpx for full endpoint coverage.
+Pydantic (frozen models), Docker CV (multi-stage serving images), ONNX/TensorRT (load optimized models in the lifespan handler), Loguru (middleware/handler logging), Testing (httpx async client).

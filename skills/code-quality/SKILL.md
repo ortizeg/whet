@@ -1,9 +1,12 @@
 ---
 name: code-quality
 description: >
-  Enforces code quality standards for AI/CV Python projects using Ruff linting,
-  MyPy strict type checking, and automated formatting. Covers editor integration,
-  pre-commit hooks, and CI pipeline enforcement.
+  Use this skill when setting up or fixing linting, type checking, and formatting for an
+  AI/CV Python project — configuring Ruff rules, MyPy strict mode, resolving lint or type
+  errors, and defining the quality bar. Reach for it any time you'd otherwise hand-tune
+  pyproject linting config or silence a type error, even if the user just says "clean up
+  the code" or "make it pass checks". This skill owns the standards themselves; the git
+  commit-hook wiring lives in pre-commit and editor integration in vscode.
 ---
 
 # Code Quality Skill
@@ -94,20 +97,9 @@ docstring-code-format = true
 ### Running Ruff
 
 ```bash
-# Check for lint violations
-pixi run ruff check .
-
-# Fix auto-fixable violations
-pixi run ruff check . --fix
-
-# Format code
-pixi run ruff format .
-
-# Check formatting without modifying
-pixi run ruff format . --check
-
-# Show what would change
-pixi run ruff format . --diff
+ruff check .            # lint
+ruff check . --fix      # lint + auto-fix
+ruff format .           # format (add --check or --diff for CI)
 ```
 
 ## Mypy Configuration
@@ -188,27 +180,12 @@ def process_image(image, target_size, normalize=True):
 #### Use modern type syntax (Python 3.11+)
 
 ```python
-# CORRECT: Modern syntax
-def get_labels() -> list[str]:
-    ...
+# CORRECT: built-in generics and PEP 604 unions
+def get_labels() -> list[str]: ...
+def get_config() -> dict[str, int]: ...
+def maybe_transform(image: np.ndarray) -> np.ndarray | None: ...
 
-def get_config() -> dict[str, int]:
-    ...
-
-def maybe_transform(image: np.ndarray) -> np.ndarray | None:
-    ...
-
-# WRONG: Legacy typing module
-from typing import Dict, List, Optional, Union
-
-def get_labels() -> List[str]:
-    ...
-
-def get_config() -> Dict[str, int]:
-    ...
-
-def maybe_transform(image: np.ndarray) -> Optional[np.ndarray]:
-    ...
+# WRONG: legacy typing module — List[str], Dict[str, int], Optional[np.ndarray]
 ```
 
 #### Use `from __future__ import annotations` in every file
@@ -290,14 +267,8 @@ DetectionList: TypeAlias = list[tuple[BoundingBox, float, int]]
 ### Running Mypy
 
 ```bash
-# Type check source code
-pixi run mypy src/ --strict
-
-# Type check with error details
-pixi run mypy src/ --strict --show-error-context
-
-# Generate HTML report
-pixi run mypy src/ --strict --html-report mypy-report/
+mypy src/ --strict                          # type check
+mypy src/ --strict --html-report report/    # optional HTML report
 ```
 
 ## Pre-commit Integration
@@ -341,14 +312,14 @@ repos:
 
 ```bash
 # Install pre-commit hooks
-pixi run pre-commit install
+pre-commit install
 
 # Run on all files (useful for first-time setup)
-pixi run pre-commit run --all-files
+pre-commit run --all-files
 
 # Run a specific hook
-pixi run pre-commit run ruff --all-files
-pixi run pre-commit run mypy --all-files
+pre-commit run ruff --all-files
+pre-commit run mypy --all-files
 ```
 
 ## CI Enforcement
@@ -368,41 +339,16 @@ on:
     branches: [main]
 
 jobs:
-  lint:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.1
 
-      - name: Install pixi
-        uses: prefix-dev/setup-pixi@v0.8.1
-
-      - name: Run ruff check
-        run: pixi run ruff check . --output-format=github
-
-      - name: Run ruff format check
-        run: pixi run ruff format . --check
-
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install pixi
-        uses: prefix-dev/setup-pixi@v0.8.1
-
-      - name: Run mypy
-        run: pixi run mypy src/ --strict
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install pixi
-        uses: prefix-dev/setup-pixi@v0.8.1
-
-      - name: Run tests
-        run: pixi run pytest tests/ -v --cov=src --cov-report=xml --cov-fail-under=80
+      - run: pixi run ruff check . --output-format=github
+      - run: pixi run ruff format . --check
+      - run: pixi run mypy src/ --strict
+      - run: pixi run pytest tests/ -v --cov=src --cov-report=xml --cov-fail-under=80
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
@@ -414,28 +360,14 @@ jobs:
 
 ### Logging Instead of Print
 
+The `T20` rule bans `print()` in source. Use a logger with lazy `%`-style args
+(the project convention is loguru — see the loguru skill):
+
 ```python
-from __future__ import annotations
+from loguru import logger
 
-import logging
-
-logger = logging.getLogger(__name__)
-
-
-def train_epoch(epoch: int, num_batches: int) -> float:
-    """Train for one epoch."""
-    logger.info("Starting epoch %d with %d batches", epoch, num_batches)
-
-    total_loss = 0.0
-    for batch_idx in range(num_batches):
-        loss = _process_batch(batch_idx)
-        total_loss += loss
-        if batch_idx % 100 == 0:
-            logger.debug("Batch %d/%d, loss=%.4f", batch_idx, num_batches, loss)
-
-    avg_loss = total_loss / num_batches
-    logger.info("Epoch %d complete, avg_loss=%.4f", epoch, avg_loss)
-    return avg_loss
+logger.info("Starting epoch {} with {} batches", epoch, num_batches)
+logger.debug("Batch {}/{}, loss={:.4f}", batch_idx, num_batches, loss)
 ```
 
 ### Path Handling with pathlib
@@ -484,10 +416,10 @@ raise ValueError("Invalid image shape")
 
 Before every commit, verify:
 
-- [ ] `pixi run ruff check .` passes with zero violations
-- [ ] `pixi run ruff format . --check` reports no changes needed
-- [ ] `pixi run mypy src/ --strict` passes with zero errors
-- [ ] `pixi run pytest tests/ -v --cov-fail-under=80` passes
+- [ ] `ruff check .` passes with zero violations
+- [ ] `ruff format . --check` reports no changes needed
+- [ ] `mypy src/ --strict` passes with zero errors
+- [ ] `pytest tests/ -v --cov-fail-under=80` passes
 - [ ] No `print()` statements in source code (use `logging`)
 - [ ] No `os.path` usage (use `pathlib.Path`)
 - [ ] No `typing.Dict`, `typing.List`, `typing.Optional` (use built-in generics)

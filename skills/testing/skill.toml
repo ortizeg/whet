@@ -5,7 +5,7 @@ category = "core"
 tags = ["testing", "pytest", "coverage", "tdd"]
 
 [dependencies]
-requires = ["pydantic-strict"]
+requires = ["pydantic"]
 recommends = ["code-quality"]
 
 [compatibility]

@@ -37,7 +37,7 @@ Data Engineer: "I recommend this approach:
 ## Related Skills
 
 - `dvc` — Data versioning patterns
-- `pydantic-strict` — Data validation models
+- `pydantic` — Data validation models
 - `testing` — Data pipeline testing strategies
 
 ## Full Reference

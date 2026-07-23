@@ -1,9 +1,12 @@
 ---
 name: wandb
 description: >
-  Weights & Biases (W&B) integration for ML experiment tracking and collaboration.
-  Covers metric logging, artifact management, hyperparameter sweeps, model registry,
-  dataset versioning, and opt-in graceful degradation patterns.
+  Use this skill when experiment tracking and collaboration run on Weights & Biases —
+  logging metrics, managing artifacts, running hyperparameter sweeps, the model registry,
+  dataset versioning, and opt-in graceful degradation. Reach for it any time training runs
+  need hosted tracking, sweeps, or team sharing and the stack is W&B, even if the user
+  just says "track this experiment" or "log the run". For a zero-setup local dashboard see
+  tensorboard; for the MLflow alternative see mlflow.
 ---
 
 # Weights & Biases (W&B) Integration for ML Projects

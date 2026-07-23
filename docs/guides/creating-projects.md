@@ -130,7 +130,7 @@ Claude:
 You: "Now implement a RetinaFace detector"
 
 Claude:
-1. Reads expert-coder, pytorch-lightning, pydantic-strict skills
+1. Reads expert-coder, pytorch-lightning, pydantic skills
 2. Creates ModelConfig with Pydantic
 3. Implements RetinaFaceModule(pl.LightningModule)
 4. Wraps backbone loading in abstraction

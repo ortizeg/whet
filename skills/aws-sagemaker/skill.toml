@@ -5,7 +5,7 @@ category = "cloud"
 tags = ["aws", "sagemaker", "training", "deployment", "cloud", "mlops"]
 
 [dependencies]
-requires = ["pydantic-strict", "loguru"]
+requires = ["pydantic", "loguru"]
 recommends = ["pytorch-lightning", "docker-cv", "wandb", "dvc"]
 
 [compatibility]

@@ -1,9 +1,12 @@
 ---
 name: github-repo-setup
 description: >
-  Best practices for initializing and configuring GitHub repositories for CV/ML projects.
-  Covers repository creation, branch protection rules, PR and issue templates,
-  CODEOWNERS, merge strategies, and gh CLI automation.
+  Use this skill when initializing or configuring a GitHub repository for a CV/ML project
+  — creating the repo, branch protection rules, PR and issue templates, CODEOWNERS, merge
+  strategy, and gh CLI automation. Reach for it any time you'd otherwise click through
+  GitHub settings by hand or ask "how should I set up this repo", even if the user just
+  says "create the repo" or "protect main". For the CI/CD workflows that run on those
+  branches see github-actions.
 ---
 
 # GitHub Repository Setup Skill

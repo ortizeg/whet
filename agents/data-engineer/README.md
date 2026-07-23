@@ -41,6 +41,6 @@ Data Engineer Agent: "For medical imaging at this scale, I recommend:
 ## Related Skills
 
 - `dvc` — Dataset versioning, pipeline reproducibility, and remote storage
-- `pydantic-strict` — Validated configuration objects and schema definitions
+- `pydantic` — Validated configuration objects and schema definitions
 - `testing` — Unit tests for transforms, integration tests for pipeline stages
 - `pytorch-lightning` — DataModule integration for feeding validated data into training

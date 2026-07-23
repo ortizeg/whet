@@ -1,9 +1,12 @@
 ---
 name: dvc
 description: >
-  Data Version Control (DVC) for versioning large datasets, models, and ML pipeline
-  artifacts. Covers DVC initialization, remote storage configuration (S3, GCS, Azure),
-  pipeline definitions, and integration with Git workflows.
+  Use this skill when versioning large datasets, model weights, or pipeline artifacts
+  with DVC — running dvc init/add/push/pull, configuring S3/GCS/Azure remotes, defining
+  reproducible dvc.yaml pipelines, and keeping big binaries out of Git. Reach for it any
+  time data or checkpoints are too large to commit to Git and need tracking or sharing,
+  even if the user doesn't say "DVC". For experiment metrics, run comparison, and model
+  registry see mlflow or wandb.
 ---
 
 # Data Version Control (DVC) for ML Projects

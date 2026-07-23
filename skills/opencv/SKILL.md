@@ -1,32 +1,27 @@
 ---
 name: opencv
 description: >
-  Type-safe OpenCV abstractions for computer vision projects. Covers video I/O,
-  image processing wrappers, drawing utilities, color space conversions, camera
-  capture, and clean API design over OpenCV's C-style interface.
+  Use this skill when doing image or video processing with OpenCV — reading and writing
+  video, camera capture, color-space conversions, drawing overlays, NumPy/PyTorch
+  conversions, and building type-safe wrappers over OpenCV's C-style cv2 API. Reach for
+  it any time you'd otherwise call cv2 directly for I/O or preprocessing, even if the user
+  doesn't say "OpenCV" and just mentions frames, webcam, or resizing images. For plotting
+  results see matplotlib; for scoring model quality see model-evaluation.
 ---
 
 # OpenCV Skill
 
-Comprehensive OpenCV abstractions for computer vision projects. This skill provides clean, type-safe wrappers around OpenCV's C-style API, covering video reading/writing, image abstractions, drawing utilities, color space conversions, and camera capture.
-
-## Why Abstractions Over Raw OpenCV
-
-OpenCV's Python API exposes the underlying C++ interface almost directly. While powerful, this leads to code that is error-prone and hard to maintain:
-
-- Functions return magic integers (e.g., `cv2.CAP_PROP_FRAME_WIDTH`) instead of named properties
-- Color channels are BGR by default, which surprises developers and causes subtle bugs
-- No type hints on function signatures
-- Resource management (releasing cameras, closing video writers) is manual
-- Error handling is inconsistent (some functions return None, others raise)
-
-The abstractions in this skill wrap OpenCV with Pythonic interfaces that are type-safe, context-managed, and consistent.
+Clean, type-safe wrappers around OpenCV's C-style API: video reading/writing,
+image abstractions, drawing utilities, color-space conversions, and camera
+capture. OpenCV's Python API exposes the C++ interface almost directly — magic
+integer properties, BGR-by-default channels, no type hints, and manual resource
+management. These abstractions fix that with Pythonic, context-managed, type-safe
+interfaces.
 
 ## VideoReader Abstraction
 
-Define an abstract base class for video reading so you can swap implementations (OpenCV, FFmpeg, hardware-accelerated) without changing application code.
-
-### Abstract Interface
+Define an ABC so you can swap implementations (OpenCV, FFmpeg, hardware decoders)
+without changing application code.
 
 ```python
 from abc import ABC, abstractmethod
@@ -39,7 +34,6 @@ import numpy as np
 
 @dataclass(frozen=True)
 class VideoMetadata:
-    """Immutable video metadata."""
     width: int
     height: int
     fps: float
@@ -53,8 +47,6 @@ class VideoMetadata:
 
 
 class VideoReaderBase(ABC):
-    """Abstract base class for video reading."""
-
     @abstractmethod
     def __init__(self, source: str | Path) -> None: ...
 
@@ -64,15 +56,11 @@ class VideoReaderBase(ABC):
         ...
 
     @abstractmethod
-    def seek(self, frame_number: int) -> None:
-        """Seek to a specific frame number."""
-        ...
+    def seek(self, frame_number: int) -> None: ...
 
-    @abstractmethod
     @property
-    def metadata(self) -> VideoMetadata:
-        """Return video metadata."""
-        ...
+    @abstractmethod
+    def metadata(self) -> VideoMetadata: ...
 
     @abstractmethod
     def __enter__(self) -> "VideoReaderBase": ...
@@ -81,7 +69,6 @@ class VideoReaderBase(ABC):
     def __exit__(self, *args) -> None: ...
 
     def __iter__(self) -> Iterator[np.ndarray]:
-        """Iterate over all frames."""
         while True:
             frame = self.read_frame()
             if frame is None:
@@ -89,7 +76,6 @@ class VideoReaderBase(ABC):
             yield frame
 
     def read_frames(self, start: int = 0, count: int | None = None) -> list[np.ndarray]:
-        """Read a range of frames."""
         self.seek(start)
         frames = []
         for frame in self:
@@ -101,15 +87,14 @@ class VideoReaderBase(ABC):
 
 ### OpenCV Implementation
 
+Reads frames as RGB (converting from OpenCV's native BGR), validates the source,
+and releases the capture on exit.
+
 ```python
 import cv2
-import numpy as np
-from pathlib import Path
 
 
 class OpenCVVideoReader(VideoReaderBase):
-    """OpenCV-based video reader with context management."""
-
     def __init__(self, source: str | Path) -> None:
         self._path = Path(source)
         if not self._path.exists():
@@ -119,23 +104,19 @@ class OpenCVVideoReader(VideoReaderBase):
         if not self._cap.isOpened():
             raise RuntimeError(f"Failed to open video: {self._path}")
 
+        fps = self._cap.get(cv2.CAP_PROP_FPS)
+        frame_count = int(self._cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self._metadata = VideoMetadata(
             width=int(self._cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
             height=int(self._cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-            fps=self._cap.get(cv2.CAP_PROP_FPS),
-            frame_count=int(self._cap.get(cv2.CAP_PROP_FRAME_COUNT)),
-            duration_seconds=(
-                int(self._cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                / max(self._cap.get(cv2.CAP_PROP_FPS), 1e-6)
-            ),
-            codec=self._decode_fourcc(
-                int(self._cap.get(cv2.CAP_PROP_FOURCC))
-            ),
+            fps=fps,
+            frame_count=frame_count,
+            duration_seconds=frame_count / max(fps, 1e-6),
+            codec=self._decode_fourcc(int(self._cap.get(cv2.CAP_PROP_FOURCC))),
         )
 
     @staticmethod
     def _decode_fourcc(fourcc: int) -> str:
-        """Decode FourCC integer to string."""
         return "".join(chr((fourcc >> (8 * i)) & 0xFF) for i in range(4))
 
     @property
@@ -150,9 +131,7 @@ class OpenCVVideoReader(VideoReaderBase):
 
     def seek(self, frame_number: int) -> None:
         if frame_number < 0 or frame_number >= self._metadata.frame_count:
-            raise ValueError(
-                f"Frame {frame_number} out of range [0, {self._metadata.frame_count})"
-            )
+            raise ValueError(f"Frame {frame_number} out of range [0, {self._metadata.frame_count})")
         self._cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
 
     def __enter__(self) -> "OpenCVVideoReader":
@@ -166,28 +145,16 @@ class OpenCVVideoReader(VideoReaderBase):
             self._cap.release()
 ```
 
-Usage:
-
-```python
-with OpenCVVideoReader("video.mp4") as reader:
-    print(f"Resolution: {reader.metadata.resolution}")
-    print(f"Duration: {reader.metadata.duration_seconds:.1f}s")
-
-    for i, frame in enumerate(reader):
-        # frame is RGB numpy array (H, W, 3)
-        process_frame(frame)
-        if i >= 100:
-            break
-```
-
 ## Image Class Abstraction
 
-Wrap numpy arrays with metadata and safe conversion methods.
+Wraps a numpy array with explicit color-space tracking, validated construction,
+and safe conversion methods — eliminating silent BGR/RGB bugs.
 
 ```python
 from __future__ import annotations
 
 from enum import Enum
+from pathlib import Path
 from typing import Self
 
 import cv2
@@ -203,7 +170,7 @@ class ColorSpace(Enum):
 
 
 class Image:
-    """Type-safe image wrapper with color space tracking."""
+    """Type-safe image wrapper with color-space tracking."""
 
     def __init__(self, data: np.ndarray, color_space: ColorSpace = ColorSpace.RGB) -> None:
         if data.ndim not in (2, 3):
@@ -212,23 +179,20 @@ class Image:
             raise ValueError(f"Expected 1, 3, or 4 channels, got {data.shape[2]}")
         if data.ndim == 2 and color_space != ColorSpace.GRAY:
             raise ValueError("2D array must use GRAY color space")
-
         self._data = data
         self._color_space = color_space
 
     @classmethod
     def from_file(cls, path: str | Path, color_space: ColorSpace = ColorSpace.RGB) -> Self:
-        """Load image from file."""
         img = cv2.imread(str(path), cv2.IMREAD_COLOR)
         if img is None:
             raise FileNotFoundError(f"Failed to load image: {path}")
         if color_space == ColorSpace.RGB:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        return cls(img, color_space=color_space if color_space != ColorSpace.RGB else ColorSpace.RGB)
+        return cls(img, color_space=color_space)
 
     @classmethod
     def from_numpy(cls, array: np.ndarray, color_space: ColorSpace = ColorSpace.RGB) -> Self:
-        """Create Image from numpy array."""
         return cls(array.copy(), color_space=color_space)
 
     @property
@@ -251,19 +215,9 @@ class Image:
     def channels(self) -> int:
         return self._data.shape[2] if self._data.ndim == 3 else 1
 
-    @property
-    def shape(self) -> tuple[int, int, int]:
-        return (self.height, self.width, self.channels)
-
-    @property
-    def dtype(self) -> np.dtype:
-        return self._data.dtype
-
     def to_color_space(self, target: ColorSpace) -> Image:
-        """Convert to a different color space."""
         if target == self._color_space:
             return self
-
         conversion_map = {
             (ColorSpace.RGB, ColorSpace.BGR): cv2.COLOR_RGB2BGR,
             (ColorSpace.BGR, ColorSpace.RGB): cv2.COLOR_BGR2RGB,
@@ -276,46 +230,41 @@ class Image:
             (ColorSpace.RGB, ColorSpace.LAB): cv2.COLOR_RGB2LAB,
             (ColorSpace.LAB, ColorSpace.RGB): cv2.COLOR_LAB2RGB,
         }
-
         key = (self._color_space, target)
         if key not in conversion_map:
             raise ValueError(f"Unsupported conversion: {self._color_space} -> {target}")
-
-        converted = cv2.cvtColor(self._data, conversion_map[key])
-        return Image(converted, color_space=target)
+        return Image(cv2.cvtColor(self._data, conversion_map[key]), color_space=target)
 
     def resize(self, width: int, height: int, interpolation: int = cv2.INTER_LINEAR) -> Image:
-        """Resize image."""
-        resized = cv2.resize(self._data, (width, height), interpolation=interpolation)
-        return Image(resized, color_space=self._color_space)
+        return Image(cv2.resize(self._data, (width, height), interpolation=interpolation),
+                     color_space=self._color_space)
 
     def to_float32(self) -> Image:
-        """Convert to float32 [0, 1] range."""
+        """Convert to float32 in [0, 1]."""
         if self._data.dtype == np.float32:
             return self
         return Image(self._data.astype(np.float32) / 255.0, color_space=self._color_space)
 
     def to_uint8(self) -> Image:
-        """Convert to uint8 [0, 255] range."""
+        """Convert to uint8 in [0, 255]."""
         if self._data.dtype == np.uint8:
             return self
         return Image((self._data * 255).clip(0, 255).astype(np.uint8), color_space=self._color_space)
 
     def to_tensor(self) -> "torch.Tensor":
-        """Convert to PyTorch tensor (C, H, W) in float32."""
+        """Convert to a PyTorch (C, H, W) float32 tensor."""
         import torch
         img = self.to_float32().to_color_space(ColorSpace.RGB)
         return torch.from_numpy(img.data.transpose(2, 0, 1))
 
     def save(self, path: str | Path) -> None:
-        """Save image to file."""
-        bgr = self.to_color_space(ColorSpace.BGR)
-        cv2.imwrite(str(path), bgr.data)
+        cv2.imwrite(str(path), self.to_color_space(ColorSpace.BGR).data)
 ```
 
 ## Drawing Utilities
 
-Clean functions for drawing annotations on images.
+Named colors with automatic BGR conversion, plus box/keypoint/mask drawers. All
+drawing functions `.copy()` the input since OpenCV mutates in place.
 
 ```python
 from dataclasses import dataclass
@@ -326,7 +275,6 @@ import numpy as np
 
 @dataclass
 class Color:
-    """RGB color."""
     r: int
     g: int
     b: int
@@ -340,7 +288,6 @@ class Color:
         return (self.r, self.g, self.b)
 
 
-# Predefined colors
 class Colors:
     RED = Color(255, 0, 0)
     GREEN = Color(0, 255, 0)
@@ -350,173 +297,96 @@ class Colors:
     MAGENTA = Color(255, 0, 255)
     WHITE = Color(255, 255, 255)
     BLACK = Color(0, 0, 0)
-
     PALETTE = [RED, GREEN, BLUE, YELLOW, CYAN, MAGENTA]
 
     @classmethod
     def for_class(cls, class_id: int) -> Color:
-        """Get a consistent color for a class ID."""
+        """Consistent color per class ID."""
         return cls.PALETTE[class_id % len(cls.PALETTE)]
 
 
 def draw_bounding_box(
     image: np.ndarray,
-    box: tuple[int, int, int, int],
+    box: tuple[int, int, int, int],  # (x1, y1, x2, y2)
     label: str = "",
     color: Color = Colors.GREEN,
     thickness: int = 2,
     font_scale: float = 0.6,
 ) -> np.ndarray:
-    """Draw a bounding box with optional label on an image.
-
-    Args:
-        image: Image array (H, W, 3) in BGR format for OpenCV.
-        box: Bounding box as (x1, y1, x2, y2).
-        label: Text label to display above the box.
-        color: Box and label color.
-        thickness: Line thickness.
-        font_scale: Font scale for the label.
-
-    Returns:
-        Image with drawn bounding box.
-    """
+    """Draw a box with an optional filled label banner. Expects BGR input."""
     img = image.copy()
-    x1, y1, x2, y2 = [int(v) for v in box]
-
+    x1, y1, x2, y2 = (int(v) for v in box)
     cv2.rectangle(img, (x1, y1), (x2, y2), color.bgr, thickness)
-
     if label:
-        (text_w, text_h), baseline = cv2.getTextSize(
-            label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 1
-        )
-        cv2.rectangle(
-            img, (x1, y1 - text_h - baseline - 4), (x1 + text_w, y1), color.bgr, -1
-        )
-        cv2.putText(
-            img, label, (x1, y1 - baseline - 2),
-            cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 1,
-        )
-
+        (tw, th), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 1)
+        cv2.rectangle(img, (x1, y1 - th - baseline - 4), (x1 + tw, y1), color.bgr, -1)
+        cv2.putText(img, label, (x1, y1 - baseline - 2),
+                    cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 1)
     return img
 
 
 def draw_detections(
     image: np.ndarray,
-    boxes: np.ndarray,
+    boxes: np.ndarray,              # (N, 4) xyxy
     labels: list[str],
     scores: np.ndarray | None = None,
     class_ids: np.ndarray | None = None,
     thickness: int = 2,
 ) -> np.ndarray:
-    """Draw multiple detection results on an image.
-
-    Args:
-        image: Image array (H, W, 3).
-        boxes: Array of shape (N, 4) in xyxy format.
-        labels: List of N label strings.
-        scores: Optional array of N confidence scores.
-        class_ids: Optional array of N class IDs for color assignment.
-        thickness: Line thickness.
-
-    Returns:
-        Annotated image.
-    """
+    """Draw multiple boxes, coloring by class ID and appending scores to labels."""
     img = image.copy()
     for i in range(len(boxes)):
         color = Colors.for_class(class_ids[i] if class_ids is not None else i)
-        text = labels[i]
-        if scores is not None:
-            text = f"{text} {scores[i]:.2f}"
+        text = f"{labels[i]} {scores[i]:.2f}" if scores is not None else labels[i]
         img = draw_bounding_box(img, tuple(boxes[i]), label=text, color=color, thickness=thickness)
     return img
 
 
 def draw_keypoints(
     image: np.ndarray,
-    keypoints: np.ndarray,
+    keypoints: np.ndarray,          # (N, 2) or (N, 3) with confidence
     skeleton: list[tuple[int, int]] | None = None,
     color: Color = Colors.GREEN,
     radius: int = 4,
     thickness: int = 2,
 ) -> np.ndarray:
-    """Draw keypoints and optional skeleton connections.
-
-    Args:
-        image: Image array (H, W, 3).
-        keypoints: Array of shape (N, 2) or (N, 3) with (x, y) or (x, y, confidence).
-        skeleton: List of (start_idx, end_idx) pairs defining connections.
-        color: Point color.
-        radius: Point radius.
-        thickness: Skeleton line thickness.
-
-    Returns:
-        Image with keypoints drawn.
-    """
+    """Draw keypoints and optional skeleton lines (drawn first, behind points)."""
     img = image.copy()
-
-    # Draw skeleton connections first (behind points)
     if skeleton is not None:
         for start, end in skeleton:
             pt1 = tuple(keypoints[start, :2].astype(int))
             pt2 = tuple(keypoints[end, :2].astype(int))
             cv2.line(img, pt1, pt2, color.bgr, thickness)
-
-    # Draw keypoints
     for kp in keypoints:
-        x, y = int(kp[0]), int(kp[1])
         conf = kp[2] if len(kp) > 2 else 1.0
         if conf > 0.5:
-            cv2.circle(img, (x, y), radius, color.bgr, -1)
-
+            cv2.circle(img, (int(kp[0]), int(kp[1])), radius, color.bgr, -1)
     return img
 
 
 def draw_mask_overlay(
     image: np.ndarray,
-    mask: np.ndarray,
+    mask: np.ndarray,               # binary (H, W), values 0/1
     color: Color = Colors.GREEN,
     alpha: float = 0.4,
 ) -> np.ndarray:
-    """Overlay a binary mask on an image with transparency.
-
-    Args:
-        image: Image array (H, W, 3).
-        mask: Binary mask (H, W) with values 0 or 1.
-        color: Overlay color.
-        alpha: Transparency (0 = invisible, 1 = opaque).
-
-    Returns:
-        Image with mask overlay.
-    """
+    """Alpha-blend a binary mask over the image."""
     img = image.copy()
     overlay = img.copy()
     overlay[mask.astype(bool)] = color.bgr
     return cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0)
 ```
 
-## Camera Capture Abstraction
+## Camera Capture
+
+Context-managed capture with configurable resolution/FPS; iterating yields frames
+until a read fails.
 
 ```python
-from contextlib import contextmanager
-
-import cv2
-import numpy as np
-
-
 class Camera:
-    """Context-managed camera capture."""
-
-    def __init__(
-        self,
-        device_id: int = 0,
-        width: int = 640,
-        height: int = 480,
-        fps: int = 30,
-    ) -> None:
+    def __init__(self, device_id: int = 0, width: int = 640, height: int = 480, fps: int = 30) -> None:
         self._device_id = device_id
-        self._width = width
-        self._height = height
-        self._fps = fps
+        self._width, self._height, self._fps = width, height, fps
         self._cap: cv2.VideoCapture | None = None
 
     def open(self) -> None:
@@ -528,9 +398,8 @@ class Camera:
         self._cap.set(cv2.CAP_PROP_FPS, self._fps)
 
     def read(self) -> np.ndarray:
-        """Read a frame. Raises RuntimeError on failure."""
         if self._cap is None:
-            raise RuntimeError("Camera not opened. Use 'with' statement or call open().")
+            raise RuntimeError("Camera not opened. Use 'with' or call open().")
         ret, frame = self._cap.read()
         if not ret:
             raise RuntimeError("Failed to read frame from camera")
@@ -549,7 +418,6 @@ class Camera:
         self.close()
 
     def __iter__(self):
-        """Yield frames continuously."""
         while True:
             try:
                 yield self.read()
@@ -557,20 +425,13 @@ class Camera:
                 break
 ```
 
-## Video Writer Abstraction
+## Video Writer
+
+Context-managed writer expecting BGR frames.
 
 ```python
 class VideoWriter:
-    """Context-managed video writer."""
-
-    def __init__(
-        self,
-        path: str | Path,
-        fps: float,
-        width: int,
-        height: int,
-        codec: str = "mp4v",
-    ) -> None:
+    def __init__(self, path: str | Path, fps: float, width: int, height: int, codec: str = "mp4v") -> None:
         self._path = Path(path)
         self._path.parent.mkdir(parents=True, exist_ok=True)
         fourcc = cv2.VideoWriter_fourcc(*codec)
@@ -580,7 +441,6 @@ class VideoWriter:
         self._frame_count = 0
 
     def write(self, frame: np.ndarray) -> None:
-        """Write a frame (expects BGR format)."""
         self._writer.write(frame)
         self._frame_count += 1
 
@@ -596,51 +456,47 @@ class VideoWriter:
 
     def __exit__(self, *args) -> None:
         self.close()
-```
 
-Usage combining reader and writer:
 
-```python
+# Read RGB, process, convert back to BGR to write:
 with OpenCVVideoReader("input.mp4") as reader:
     meta = reader.metadata
     with VideoWriter("output.mp4", meta.fps, meta.width, meta.height) as writer:
         for frame in reader:
             processed = process_frame(frame)
-            # Convert RGB back to BGR for writer
             writer.write(cv2.cvtColor(processed, cv2.COLOR_RGB2BGR))
 ```
 
-## Integration with NumPy and PyTorch
+## NumPy / PyTorch Conversions
 
 ```python
-import numpy as np
 import torch
 
 
 def numpy_to_torch(image: np.ndarray) -> torch.Tensor:
-    """Convert HWC uint8 numpy array to CHW float32 tensor."""
+    """HWC uint8 -> CHW float32 tensor."""
     if image.dtype == np.uint8:
         image = image.astype(np.float32) / 255.0
     return torch.from_numpy(image.transpose(2, 0, 1))
 
 
 def torch_to_numpy(tensor: torch.Tensor) -> np.ndarray:
-    """Convert CHW float32 tensor to HWC uint8 numpy array."""
+    """CHW float32 tensor -> HWC uint8."""
     arr = tensor.detach().cpu().numpy().transpose(1, 2, 0)
     return (arr * 255).clip(0, 255).astype(np.uint8)
 
 
 def batch_to_numpy(batch: torch.Tensor) -> list[np.ndarray]:
-    """Convert BCHW tensor batch to list of HWC numpy arrays."""
+    """BCHW tensor -> list of HWC uint8 arrays."""
     return [torch_to_numpy(batch[i]) for i in range(batch.shape[0])]
 ```
 
 ## Best Practices
 
-1. **Always track color space** -- Use the `Image` class or explicit naming (`frame_rgb`, `frame_bgr`) to avoid silent BGR/RGB confusion.
-2. **Use context managers** -- Always wrap `VideoCapture` and `VideoWriter` in `with` blocks to ensure resources are released.
-3. **Convert to RGB early** -- Convert from BGR to RGB immediately after reading; convert back to BGR only when writing or displaying with OpenCV.
-4. **Abstract over backends** -- Define interfaces (ABCs) so you can swap OpenCV for FFmpeg, Decord, or hardware decoders without changing application code.
-5. **Validate inputs** -- Check that images have the expected dtype, shape, and value range before processing.
-6. **Copy before mutating** -- OpenCV drawing functions modify arrays in place. Always `.copy()` if the original should be preserved.
-7. **Use named constants** -- Define color palettes and codec strings as module-level constants, not magic values scattered through code.
+1. **Always track color space** -- use the `Image` class or explicit naming (`frame_rgb`, `frame_bgr`) to avoid silent BGR/RGB confusion.
+2. **Use context managers** -- wrap `VideoCapture`/`VideoWriter` in `with` blocks to guarantee release.
+3. **Convert to RGB early** -- convert BGR->RGB right after reading; convert back only when writing or displaying with OpenCV.
+4. **Abstract over backends** -- define ABCs so OpenCV can be swapped for FFmpeg, Decord, or hardware decoders.
+5. **Validate inputs** -- check dtype, shape, and value range before processing.
+6. **Copy before mutating** -- OpenCV drawing functions modify arrays in place.
+7. **Use named constants** -- define color palettes and codec strings as module-level constants, not magic values.

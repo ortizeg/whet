@@ -6,13 +6,13 @@
 
 ## What Is This?
 
-AI/CV Claude Skills is a curated collection of **30 specialized skills**, **6 agent personas**, and **6 project archetypes** that teach Claude Code how to write production-grade computer vision and deep learning code. Instead of getting generic AI-generated code, you get output that follows the exact patterns, libraries, and conventions used by experienced CV/ML engineers.
+AI/CV Claude Skills is a curated collection of **33 specialized skills**, **6 agent personas**, and **6 project archetypes** that teach Claude Code how to write production-grade computer vision and deep learning code. Instead of getting generic AI-generated code, you get output that follows the exact patterns, libraries, and conventions used by experienced CV/ML engineers.
 
 Each skill is a focused knowledge module that Claude Code loads on demand. When you tell Claude to "use the PyTorch Lightning skill," it gains deep understanding of Lightning best practices, project structure, and common patterns -- producing code that looks like it was written by a specialist.
 
 ## Key Features
 
-- **30 Domain-Specific Skills** -- From PyTorch Lightning training loops to ONNX model export, each skill encodes expert knowledge about a specific tool or pattern.
+- **33 Domain-Specific Skills** -- From PyTorch Lightning training loops to ONNX model export and model evaluation, each skill encodes expert knowledge about a specific tool or pattern.
 - **6 Agent Personas** -- Pre-configured behavioral profiles (Expert Coder, ML Engineer, DevOps/Infra, Data Engineer, Code Reviewer, Test Engineer) that adjust Claude's strictness, focus, and output style.
 - **6 Project Archetypes** -- Complete project templates for common CV/ML project types: training pipelines, inference services, research notebooks, library packages, data pipelines, and model zoos.
 - **Composable by Design** -- Skills combine naturally. A PyTorch training project might use the PyTorch Lightning, Hydra Config, Weights & Biases, and Docker CV skills together.
@@ -45,10 +45,10 @@ Claude Code will generate:
 
 ```
 whet/
-    skills/                  # 25 domain-specific skill modules
+    skills/                  # 33 domain-specific skill modules
         master-skill/        # Core conventions for all CV/ML code
         pytorch-lightning/   # PyTorch Lightning training patterns
-        pydantic-strict/     # Strict data validation with Pydantic
+        pydantic/     # Strict data validation with Pydantic
         ...
     agents/                  # 6 agent persona definitions
         expert-coder/        # High-strictness coding agent
@@ -76,7 +76,7 @@ Ready to dive in? Head to the [Installation](getting-started/installation.md) gu
 | Section | Description |
 |---------|-------------|
 | [Getting Started](getting-started/installation.md) | Install prerequisites, clone the repo, and configure Claude Code |
-| [Skills Overview](skills/index.md) | Browse all 30 skills with categories and descriptions |
+| [Skills Overview](skills/index.md) | Browse all 33 skills with categories and descriptions |
 | [Agents](agents/index.md) | Learn about the 6 agent personas and when to use each |
 | [Archetypes](archetypes/index.md) | Explore the 6 project templates |
 | [Guides](guides/creating-projects.md) | Step-by-step guides for common workflows |
