@@ -27,23 +27,6 @@ def test_skills_reference_valid_skills() -> None:
                 )
 
 
-def test_agents_directory_structure() -> None:
-    """Test agents have consistent structure."""
-    agents_dir = Path("agents")
-
-    for agent_dir in agents_dir.iterdir():
-        if not agent_dir.is_dir() or agent_dir.name.startswith("."):
-            continue
-
-        # All agents must have SKILL.md and README.md
-        assert (agent_dir / "SKILL.md").exists(), f"{agent_dir.name} missing SKILL.md"
-        assert (agent_dir / "README.md").exists(), f"{agent_dir.name} missing README.md"
-
-        # Check SKILL.md is substantial
-        skill_content = (agent_dir / "SKILL.md").read_text()
-        assert len(skill_content) > 500, f"{agent_dir.name} SKILL.md is too short"
-
-
 def test_archetypes_have_consistent_docs() -> None:
     """Test all archetypes document their structure."""
     archetypes_dir = Path("archetypes")

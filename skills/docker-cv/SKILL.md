@@ -14,6 +14,18 @@ description: >
 
 Build optimized Docker images for computer vision and deep learning workloads with CUDA support, multi-stage builds, and security best practices.
 
+## Choosing a Containerization Approach
+
+```
+Need to package an ML application?
+├── Single model serving → Dockerfile with multi-stage build
+├── Multiple models/services → Docker Compose for local, K8s for prod
+├── GPU required?
+│   ├── Training → NVIDIA base images (nvcr.io/nvidia/pytorch)
+│   └── Inference → optimized runtime images (NVIDIA Triton, TorchServe)
+└── No GPU → Python slim base image
+```
+
 ## Multi-Stage Build Strategy
 
 Use separate stages to minimize final image size and maximize layer cache reuse.

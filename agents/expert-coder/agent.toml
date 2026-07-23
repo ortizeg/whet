@@ -1,8 +1,0 @@
-[agent]
-name = "expert-coder"
-version = "1.0.0"
-type = "advisory"
-tags = ["coding", "architecture", "python", "best-practices"]
-
-[ci]
-has_action = false

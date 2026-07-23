@@ -28,6 +28,16 @@ Every job shares the same setup steps. Later examples abbreviate this as `# ...p
 
 ## Workflow Tiers
 
+Decide what runs at each trigger before writing YAML:
+
+```
+What should CI do?
+├── Every commit → lint + type check + unit tests        (< 5 min)
+├── Every PR     → above + integration tests + Docker build (< 15 min)
+├── Merge to main → above + push image + deploy staging
+└── Release tag  → deploy production + create GitHub Release
+```
+
 Organize workflows by speed and trigger frequency.
 
 ### Tier 1: Lint and Format (every push)

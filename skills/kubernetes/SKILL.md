@@ -14,6 +14,19 @@ description: >
 
 Deployment patterns for ML inference and training services: GPU scheduling, Helm charts, autoscaling, and environment-specific overlays.
 
+## Is Kubernetes the Right Target?
+
+Reach for K8s only when the load and operational maturity justify it.
+
+```
+Where should this run?
+├── Internal/team use → single instance + Docker Compose
+├── Production API (< 100 RPS) → Cloud Run / App Runner / ECS Fargate
+├── Production API (> 100 RPS) → Kubernetes with autoscaling  ← this skill
+├── Batch inference → Vertex AI Batch / SageMaker Batch Transform
+└── Training at scale → Vertex AI / SageMaker training jobs (see gcp)
+```
+
 ## Deployment Manifests for ML Services
 
 Define Deployments with explicit resource requests and GPU scheduling for inference workloads.

@@ -1,0 +1,13 @@
+[skill]
+name = "cv-model-selection"
+version = "1.0.0"
+category = "cv-ml"
+tags = ["detection", "architecture", "rf-detr", "yolox", "tracking", "small-objects"]
+
+[dependencies]
+requires = []
+recommends = ["pytorch-lightning", "model-evaluation", "onnx", "data-pipelines"]
+
+[compatibility]
+python = ">=3.11"
+libraries = {}

@@ -41,8 +41,7 @@ whet is a CLI tool that installs curated expert skill definitions into AI coding
 
 ### Flagship Collection: CV/ML
 
-- **32 Skills** — PyTorch Lightning, Pydantic, Docker, ONNX, TensorRT, OpenCV, FastAPI, Hugging Face, AWS SageMaker, Gradio, Kubernetes, Model Evaluation, and more
-- **6 Agents** — Expert Coder, ML Engineer, DevOps/Infra, Data Engineer, Code Review, Test Engineer
+- **34 Skills** — PyTorch Lightning, Pydantic, Docker, ONNX, TensorRT, OpenCV, FastAPI, Hugging Face, AWS SageMaker, Gradio, Kubernetes, Model Evaluation, and more
 - **6+ Archetypes** — Training pipelines, inference services, notebooks, packages
 
 ### Multi-Platform
@@ -102,7 +101,7 @@ just typecheck
 
 ## Contributing
 
-Contributions welcome! See [CLAUDE.md](CLAUDE.md) for how to add new skills, agents, or archetypes.
+Contributions welcome! See [CLAUDE.md](CLAUDE.md) for how to add new skills or archetypes.
 
 ## License
 

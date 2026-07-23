@@ -27,7 +27,6 @@ def config(
         console.print("[bold]whet configuration[/bold]\n")
         console.print(f"  target:         {cfg.target.value}")
         console.print(f"  skills_dir:     {cfg.skills_dir}")
-        console.print(f"  agents_dir:     {cfg.agents_dir}")
         console.print(f"  archetypes_dir: {cfg.archetypes_dir}")
         return
 

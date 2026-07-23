@@ -209,5 +209,5 @@ uv run python src/object_detector/train.py trainer.devices=4 trainer.strategy=dd
 ## Next Steps
 
 - Explore individual [skill documentation](../skills/index.md) for deeper dives
-- Read about [agent personas](../agents/index.md) to adjust Claude's behavior
+- Browse the [skills overview](../skills/index.md) to add more capabilities
 - Check out [common patterns](../examples/common-patterns.md) for more examples

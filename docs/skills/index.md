@@ -50,6 +50,7 @@ Skills specific to computer vision workflows.
 | [ONNX](onnx.md) | Model export and optimization | onnx, onnxruntime, onnxslim |
 | [TensorRT](tensorrt.md) | GPU-optimized inference engine building | TensorRT, trtexec |
 | [Model Evaluation](model-evaluation.md) | Metrics, mAP/IoU, eval sets, failure analysis | supervision, torchmetrics |
+| [CV Model Selection](cv-model-selection.md) | Detector architecture choice, small objects, tracking | RF-DETR, YOLOX |
 | [PydanticAI](pydantic-ai.md) | Type-safe LLM/VLM structured outputs, auto-labeling | pydantic-ai |
 | [Hugging Face](huggingface.md) | Pretrained models, fine-tuning, PEFT/LoRA | transformers, datasets, peft |
 
@@ -77,6 +78,7 @@ Skills for packaging, deploying, and maintaining projects.
 | [Pre-commit](pre-commit.md) | Git hook automation | pre-commit |
 | [VS Code](vscode.md) | Editor configuration for ML development | VS Code |
 | [DVC](dvc.md) | Data and model version control | DVC |
+| [Data Pipelines](data-pipelines.md) | ETL, storage formats, leakage-free splitting, schema evolution | polars, Great Expectations |
 
 ### Process & Review
 

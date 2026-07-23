@@ -13,6 +13,23 @@ description: >
 
 Pytest patterns for ML and computer vision projects: test structure, fixtures, parametrized tests, CV-specific strategies, mocking, performance testing, and CI. ML code fails silently — a model can train cleanly yet predict garbage from wrong preprocessing, label mapping, transposed dims, or broken augmentation. Tests catch these before they waste GPU hours.
 
+## Coverage Requirements
+
+- **Overall:** minimum 80% line coverage
+- **New code:** at least 90%
+- **Critical paths:** 100% — model forward pass, data loading, config validation
+- **No skipped tests:** fix or delete them; a permanently skipped test is a lie
+
+## Test Naming Convention
+
+Pattern: `test_<what>_<condition>_<expected>` — the name should state the contract.
+
+```python
+def test_detector_empty_image_raises_error() -> None: ...
+def test_config_negative_lr_raises_validation_error() -> None: ...
+def test_model_forward_batch_returns_correct_shape() -> None: ...
+```
+
 ## Test Structure
 
 Three tiers: unit (fast, isolated), integration (component interactions), and e2e (full pipeline).
