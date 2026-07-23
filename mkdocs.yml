@@ -69,7 +69,6 @@ nav:
     - Hydra Config: skills/hydra-config.md
     - Testing: skills/testing.md
     - Model Evaluation: skills/model-evaluation.md
-    - CV Model Selection: skills/cv-model-selection.md
     - OpenCV: skills/opencv.md
     - Matplotlib: skills/matplotlib.md
     - PyPI: skills/pypi.md
@@ -81,7 +80,6 @@ nav:
     - Weights & Biases: skills/wandb.md
     - MLflow: skills/mlflow.md
     - TensorBoard: skills/tensorboard.md
-    - DVC: skills/dvc.md
     - Data Pipelines: skills/data-pipelines.md
     - ONNX: skills/onnx.md
     - TensorRT: skills/tensorrt.md

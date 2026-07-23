@@ -26,8 +26,7 @@ Reference this skill when:
 - Processing datasets that exceed memory (chunked parallel work, streaming reads).
 - Changing the fields of an existing dataset and needing a migration path.
 
-Use `dvc` instead for file-level versioning of datasets and checkpoints, and
-`model-evaluation` for scoring models on the splits this skill produces.
+Use `model-evaluation` for scoring models on the splits this skill produces.
 
 ## Key Patterns
 

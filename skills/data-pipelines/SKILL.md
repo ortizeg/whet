@@ -7,8 +7,7 @@ description: >
   evolving a dataset schema, or processing image/video data at a scale that exceeds memory.
   Reach for it any time you would otherwise glob a directory, random-split a DataFrame, or
   hand-write a CSV manifest, even if the user doesn't say "pipeline" or "ETL" explicitly.
-  Not for file-level versioning of datasets and checkpoints (see `dvc`), and not for scoring
-  or comparing models (see `model-evaluation`).
+  Not for scoring or comparing models (see `model-evaluation`).
 ---
 
 # Data Pipelines for CV/ML
@@ -32,8 +31,8 @@ pixi add --pypi great-expectations albumentations webdataset
 
 ```
 Building a data pipeline?
-├── Small (< 10 GB) ............ Polars / Pandas + DVC
-├── Medium (10–500 GB) ......... Polars / DuckDB + Parquet + DVC
+├── Small (< 10 GB) ............ Polars / Pandas
+├── Medium (10–500 GB) ......... Polars / DuckDB + Parquet
 ├── Large (500 GB – 10 TB) ..... Arrow / Spark + cloud object storage
 ├── Streaming / continuous ..... Kafka / Flink + Delta Lake
 └── Annotation pipeline ........ Label Studio / CVAT + validation hooks
@@ -456,10 +455,6 @@ field changes meaning or type — inheritance must never hide a breaking change.
 Store `schema_version` alongside the data (Parquet key-value metadata or a sidecar
 `dataset.json`) so readers dispatch to the right model instead of guessing.
 
-## Versioning
-
-Version datasets, manifests, and split outputs with DVC — see the `dvc` skill.
-
 ## Anti-Patterns
 
 - **Never split randomly when a grouping key exists.** Frames from one video, images of one patient, or plays from one match must live in exactly one split.
@@ -470,11 +465,10 @@ Version datasets, manifests, and split outputs with DVC — see the `dvc` skill.
 - **Never apply training augmentations to val or test.** Only deterministic resize/normalize outside training.
 - **Never silently change a schema.** Version it and write an explicit migration.
 - **Never hard-code paths or ratios.** Put them in a validated Pydantic config.
-- **Never version data in Git.** Use DVC or object storage.
+- **Never version data in Git.** Keep large artifacts in object storage and track a manifest.
 
 ## Related Skills
 
-- `dvc` — dataset and artifact versioning, pipeline reproducibility, remotes
 - `pydantic` — validated configs and schema definitions for every stage
 - `pytorch-lightning` — `LightningDataModule` consuming validated splits
 - `model-evaluation` — scoring models on the splits this skill produces

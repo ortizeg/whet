@@ -6,7 +6,7 @@ tags = ["data", "etl", "dataset", "splitting", "storage", "data-quality"]
 
 [dependencies]
 requires = []
-recommends = ["dvc", "pydantic", "model-evaluation"]
+recommends = ["pydantic", "model-evaluation"]
 
 [compatibility]
 python = ">=3.11"

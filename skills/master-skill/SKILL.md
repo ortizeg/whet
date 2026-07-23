@@ -37,7 +37,6 @@ You are initializing a new AI/CV project using the whet framework.
    - Weights & Biases (wandb)
    - MLflow
    - TensorBoard
-   - DVC (data versioning)
    - ONNX export
    - Model evaluation (model-evaluation)
 

@@ -6,7 +6,7 @@ tags = ["evaluation", "metrics", "map", "detection", "supervision", "eval"]
 
 [dependencies]
 requires = []
-recommends = ["testing", "matplotlib", "wandb", "dvc"]
+recommends = ["testing", "matplotlib", "wandb"]
 
 [compatibility]
 python = ">=3.11"

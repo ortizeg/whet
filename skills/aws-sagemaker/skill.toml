@@ -6,7 +6,7 @@ tags = ["aws", "sagemaker", "training", "deployment", "cloud", "mlops"]
 
 [dependencies]
 requires = ["pydantic", "loguru"]
-recommends = ["pytorch-lightning", "docker-cv", "wandb", "dvc"]
+recommends = ["pytorch-lightning", "docker-cv", "wandb"]
 
 [compatibility]
 python = ">=3.11"

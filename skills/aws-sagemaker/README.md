@@ -28,5 +28,4 @@ When you need to train models at scale on AWS infrastructure or deploy models be
 - **[PyTorch Lightning](../pytorch-lightning/)** — LightningModule patterns used inside SageMaker training scripts.
 - **[Docker CV](../docker-cv/)** — custom training container images when default SageMaker images are insufficient.
 - **[W&B](../wandb/)** / **[MLflow](../mlflow/)** — experiment tracking inside SageMaker training containers.
-- **[DVC](../dvc/)** — data versioning with S3 remote storage.
 - **[GCP](../gcp/)** — alternative cloud platform patterns for comparison.

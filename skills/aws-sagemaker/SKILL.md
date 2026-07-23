@@ -452,4 +452,3 @@ def test_training_local(local_estimator: PyTorch, tmp_path: Path) -> None:
 
 - **PyTorch Lightning** — LightningModule inside training jobs; **Hydra Config** — hyperparameters flattened to key-value pairs.
 - **W&B / MLflow** — experiment tracking in containers; **Docker CV** — custom containers when built-in images fall short.
-- **DVC** — data versioning with an S3 remote SageMaker can access.

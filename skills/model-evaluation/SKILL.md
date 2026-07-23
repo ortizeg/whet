@@ -29,8 +29,8 @@ tuning decisions — never touched.
 
 - **Three splits.** Train (fit), validation (tune/early-stop/threshold-select), test
   (report once). Never select thresholds or checkpoints on the test set.
-- **Freeze the test set.** Version it (see the `dvc` skill) so numbers are comparable
-  across runs. A metric that moves because the test set changed is not a metric.
+- **Freeze the test set.** Keep it immutable and content-addressed so numbers are
+  comparable across runs. A metric that moves because the test set changed is not a metric.
 - **Prevent leakage.** Split by the unit that must generalize — by scene/video/match, not
   by frame — so near-duplicate frames don't span train and test.
 - **Report with uncertainty.** Bootstrap the test set for a confidence interval,

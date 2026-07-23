@@ -84,4 +84,4 @@ uv run pre-commit run --all-files
 
 ## Full Reference
 
-See [`skills/pre-commit/SKILL.md`](https://github.com/ortizeg/whet/blob/main/skills/pre-commit/SKILL.md) for patterns including custom local hooks for ML-specific validation, commit message linting, and DVC file validation hooks.
+See [`skills/pre-commit/SKILL.md`](https://github.com/ortizeg/whet/blob/main/skills/pre-commit/SKILL.md) for patterns including custom local hooks for ML-specific validation, commit message linting, and large-artifact validation hooks.

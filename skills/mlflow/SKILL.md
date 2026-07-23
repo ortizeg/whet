@@ -6,8 +6,7 @@ description: >
   versioning and promoting models through stages, and running a self-hosted tracking
   server. Reach for it any time you'd otherwise hand-roll run tracking or ask "which
   config produced this result?" and the stack is MLflow, even if the user doesn't say it.
-  For the W&B or TensorBoard alternatives see wandb and tensorboard; for versioning the
-  data and model files themselves see dvc.
+  For the W&B or TensorBoard alternatives see wandb and tensorboard.
 ---
 
 # MLflow Tracking Integration for ML Projects

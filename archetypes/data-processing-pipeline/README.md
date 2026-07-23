@@ -6,7 +6,7 @@ A structured project template for building robust ETL (Extract, Transform, Load)
 
 Data preparation is the most time-consuming and error-prone phase of any machine learning project. Raw datasets arrive in inconsistent formats, contain corrupt files, have labeling errors, and require extensive transformation before they are suitable for training. Despite this, data processing code is often the least structured part of an ML codebase -- scattered across ad-hoc scripts, undocumented Jupyter cells, and bash one-liners that are impossible to reproduce.
 
-The Data Processing Pipeline archetype solves this by providing a modular, testable, and reproducible framework for dataset preparation. Each processing step is implemented as an isolated stage with defined inputs, outputs, and validation criteria. Stages are composed into pipelines that can be executed end-to-end or incrementally, with each intermediate result cached and validated. The framework supports parallel processing for throughput-intensive operations and integrates with DVC for dataset versioning.
+The Data Processing Pipeline archetype solves this by providing a modular, testable, and reproducible framework for dataset preparation. Each processing step is implemented as an isolated stage with defined inputs, outputs, and validation criteria. Stages are composed into pipelines that can be executed end-to-end or incrementally, with each intermediate result cached and validated. The framework supports parallel processing for throughput-intensive operations and versions datasets by keeping the bulk data in object storage alongside a content-hashed manifest committed to the repository.
 
 The core design principle is that every transformation applied to data must be explicit, tested, logged, and reversible. This ensures that when model performance changes, the data lineage can be traced back to identify whether the change originated in the data pipeline or the model.
 
@@ -34,8 +34,6 @@ The core design principle is that every transformation applied to data must be e
 ├── pixi.toml
 ├── pyproject.toml
 ├── README.md
-├── dvc.yaml                            # DVC pipeline definition
-├── dvc.lock                            # DVC pipeline state
 ├── params.yaml                         # Pipeline parameters
 ├── conf/
 │   ├── pipeline.yaml                  # Pipeline stage configuration
@@ -113,7 +111,7 @@ The core design principle is that every transformation applied to data must be e
 - **Parallel processing** with configurable worker pools for CPU-bound operations like image resizing and augmentation.
 - **Progress tracking** with rich progress bars showing per-stage and overall pipeline completion.
 - **Content hashing** for deduplication and change detection, enabling incremental processing of modified files only.
-- **DVC integration** for versioning large datasets and reproducing pipeline runs with exact data lineage.
+- **Dataset versioning** through content-hashed manifests kept in Git while the bulk data lives in object storage, so pipeline runs reproduce with exact data lineage.
 - **HTML reports** generated after each pipeline run summarizing dataset statistics, quality metrics, and processing logs.
 
 ## Pipeline Stage Interface
@@ -175,7 +173,6 @@ pandas = ">=2.1"
 albumentations = ">=1.3"
 tqdm = ">=4.66"
 rich = ">=13.0"
-dvc = ">=3.30"
 pyarrow = ">=14.0"
 ```
 
@@ -196,9 +193,6 @@ pixi run python scripts/run_pipeline.py
 # Run with custom configuration overrides
 pixi run python scripts/run_pipeline.py --config conf/pipeline.yaml \
     --override splitting.test_ratio=0.15
-
-# Run via DVC (tracks data lineage)
-pixi run dvc repro
 ```
 
 ### Running Individual Stages
@@ -222,23 +216,6 @@ pixi run python scripts/validate_dataset.py data/processed/ --format coco --repo
 
 # Check for data leakage between splits
 pixi run python scripts/validate_dataset.py data/processed/ --check-leakage
-```
-
-### DVC Integration
-
-```bash
-# Initialize DVC
-pixi run dvc init
-
-# Track raw data in remote storage
-pixi run dvc add data/raw/
-pixi run dvc push
-
-# Reproduce the pipeline (only re-runs changed stages)
-pixi run dvc repro
-
-# Compare pipeline outputs between branches
-pixi run dvc diff
 ```
 
 ## Customization Guide

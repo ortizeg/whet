@@ -87,11 +87,10 @@ def migrate_v2_to_v3(record: SchemaV2, split: str, quality_score: float = 1.0) -
 - Do not apply training augmentations to val or test sets
 - Do not change a dataset schema silently -- version it and write a migration
 - Do not assume a public or "curated" dataset is clean -- run the quality gate anyway
-- Do not commit data to Git -- use DVC or object storage
+- Do not commit data to Git -- keep the bulk data in object storage and version a manifest
 
 ## Combines Well With
 
-- **DVC** -- Version the manifests, splits, and processed outputs this skill produces
 - **Pydantic** -- Validated configs and per-record schema enforcement
 - **PyTorch Lightning** -- `LightningDataModule` consuming the validated splits
 - **Model Evaluation** -- Scoring models on splits built without leakage
