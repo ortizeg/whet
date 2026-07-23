@@ -6,44 +6,67 @@ The model-evaluation skill covers how to measure CV/ML model quality correctly �
 
 ## Purpose
 
-Unit tests check that code runs; evaluation checks whether the *model* is good enough to ship on data it has never seen, and *where* it fails. This skill teaches Claude Code to compute the right metrics (mAP, IoU, per-class F1, calibration), enforce leakage-free eval-set discipline, select deployment thresholds, run per-slice failure analysis, and gate CI on regressions. It is the implementation counterpart to GSD's `eval-planner`: GSD designs the eval strategy, this skill carries it out.
+Unit tests check that code runs; evaluation checks whether the *model* is good enough to ship on data it has never seen, and *where* it fails. Detection evaluation is built on **`supervision`** (`import supervision as sv`), the detection-native library that speaks the same `sv.Detections` object as RF-DETR, YOLO, Ultralytics, and Transformers outputs, with metrics aligned to `pycocotools`. It is the implementation counterpart to GSD's `eval-planner`.
 
 ## When to Use
 
-- Computing detection metrics: mAP@[.50:.95], mAP@.50, per-class AP, IoU by object size
-- Computing classification metrics: per-class F1, confusion matrix, calibration/ECE
-- Computing segmentation metrics: mean IoU, Dice
-- Building precision-recall curves and selecting deployment thresholds
+- Detection metrics: mAP@[.50:.95], mAP@.50, per-class AP, per-size buckets
+- Precision / Recall / F1 and confusion matrices
+- Selecting a deployment confidence threshold on validation
 - Per-slice / failure analysis to find where the model breaks
-- Wiring evaluation into CI as a regression gate against a committed baseline
+- Classification metrics (per-class F1, calibration/ECE) via torchmetrics
+- Wiring evaluation into CI as a regression gate
 
 ## Key Patterns
 
-### Detection mAP (torchmetrics / pycocotools)
+### Detection mAP with supervision
 
 ```python
-from torchmetrics.detection import MeanAveragePrecision
+import supervision as sv
+from supervision.metrics import MeanAveragePrecision, MetricTarget
 
-metric = MeanAveragePrecision(iou_type="bbox", class_metrics=True, backend="pycocotools")
-for images, targets in test_loader:
-    metric.update(model(images), targets)
-result = metric.compute()  # map, map_50, map_per_class, map_small/medium/large
+dataset = sv.DetectionDataset.from_coco(
+    images_directory_path="data/test/images",
+    annotations_path="data/test/_annotations.coco.json",
+)
+
+predictions, targets = [], []
+for _path, image, target in dataset:
+    predictions.append(predict(image))   # -> sv.Detections
+    targets.append(target)
+
+result = MeanAveragePrecision(metric_target=MetricTarget.BOXES).update(
+    predictions, targets
+).compute()
+print(result.map50_95, result.map50)
 ```
 
-### Operating-point selection
+### Confusion matrix (at a real deployment threshold)
 
-Select the score threshold on the **validation** set to meet a product requirement
-(e.g. precision ≥ 0.9), then report the resulting recall on the frozen test set.
+```python
+cm = sv.ConfusionMatrix.from_detections(
+    predictions=predictions, targets=targets, classes=dataset.classes,
+    conf_threshold=0.30, iou_threshold=0.50,
+)
+cm.plot(normalize=True, save_path="artifacts/confusion_matrix.png")
+```
 
 ### Eval-as-CI gate
 
-Compare against a committed baseline and fail the build when quality drops outside the
-bootstrap confidence interval.
+Compare against a committed baseline and fail the build when quality drops outside the bootstrap confidence interval.
+
+## Gotchas
+
+- The top-level `sv.MeanAveragePrecision` is **deprecated** (removed in 0.31.0) and inconsistent with pycocotools — import from `supervision.metrics`.
+- `MetricTarget.MASKS` is silently ignored by mAP in released versions; use `pycocotools` for instance-segmentation mAP.
+- Do not pre-filter predictions at a deploy threshold before mAP — it needs the full score-ranked list (filter at ~0.001).
+- `-1` is an "absent" sentinel, not a score.
+- `len(predictions) != len(targets)` raises — append `sv.Detections.empty()` for empty images.
 
 ## Anti-Patterns
 
-- Reporting accuracy or mean-mAP only, hiding a collapsed class or small-object failure.
-- Selecting thresholds or checkpoints on the test set (leakage inflates every number).
-- Splitting by frame instead of by scene/video/entity (near-duplicate leakage).
-- Hand-rolling mAP/IoU instead of using torchmetrics/pycocotools.
-- Shipping without a slice/failure analysis or a frozen regression set.
+- Reporting mean mAP only, hiding a collapsed class or small-object failure
+- Selecting thresholds or checkpoints on the test set (leakage)
+- Splitting by frame instead of by scene/video/match (near-duplicate leakage)
+- Hand-rolling mAP/IoU instead of using supervision or pycocotools
+- Shipping without a slice/failure analysis or a frozen regression set

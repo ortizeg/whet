@@ -49,7 +49,7 @@ Skills specific to computer vision workflows.
 | [Matplotlib](matplotlib.md) | Visualization and plotting for CV results | matplotlib |
 | [ONNX](onnx.md) | Model export and optimization | onnx, onnxruntime, onnxslim |
 | [TensorRT](tensorrt.md) | GPU-optimized inference engine building | TensorRT, trtexec |
-| [Model Evaluation](model-evaluation.md) | Metrics, mAP/IoU, eval sets, failure analysis | torchmetrics, pycocotools |
+| [Model Evaluation](model-evaluation.md) | Metrics, mAP/IoU, eval sets, failure analysis | supervision, torchmetrics |
 | [PydanticAI](pydantic-ai.md) | Type-safe LLM/VLM structured outputs, auto-labeling | pydantic-ai |
 | [Hugging Face](huggingface.md) | Pretrained models, fine-tuning, PEFT/LoRA | transformers, datasets, peft |
 
