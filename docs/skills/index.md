@@ -13,6 +13,23 @@ Each skill lives in its own directory under `skills/` and contains:
 
 When you reference a skill in a Claude Code session, Claude reads the `SKILL.md` and uses its contents to guide code generation. The skill does not execute code -- it provides expert context that shapes Claude's output.
 
+## Install Tiers
+
+Skills are either **core** (installed by `whet install`) or **extra** (opt-in). Extras are
+marked _(extra)_ below — they are real skills, but outside the flagship CV/ML path, so they
+stay out of the default trigger surface. Install them with:
+
+```bash
+whet install --include-extras
+```
+
+## Companion Skills
+
+whet does not ship a general product-UI ruleset — `gradio` covers ML demos only. For
+application or dashboard UI work, pair whet with the external **`interface-design`** skill.
+Note that if its `references/` directory is missing from your install, its "Deep dives"
+links will not resolve.
+
 ## Skill Categories
 
 ### Core Framework
@@ -36,7 +53,7 @@ Skills for building and training deep learning models.
 | [PyTorch Lightning](pytorch-lightning.md) | Training loops, modules, and callbacks | Lightning 2.x |
 | [Hydra Config](hydra-config.md) | Hierarchical configuration management | Hydra, OmegaConf |
 | [Weights & Biases](wandb.md) | Experiment tracking and visualization | wandb |
-| [MLflow](mlflow.md) | ML lifecycle and model registry | MLflow |
+| [MLflow](mlflow.md) _(extra)_ | ML lifecycle and model registry | MLflow |
 | [TensorBoard](tensorboard.md) | Training visualization and profiling | TensorBoard |
 
 ### Computer Vision
@@ -51,16 +68,16 @@ Skills specific to computer vision workflows.
 | [TensorRT](tensorrt.md) | GPU-optimized inference engine building | TensorRT, trtexec |
 | [Model Evaluation](model-evaluation.md) | Metrics, mAP/IoU, eval sets, failure analysis | supervision, torchmetrics |
 | [PydanticAI](pydantic-ai.md) | Type-safe LLM/VLM structured outputs, auto-labeling | pydantic-ai |
-| [Hugging Face](huggingface.md) | Pretrained models, fine-tuning, PEFT/LoRA | transformers, datasets, peft |
+| [Hugging Face](huggingface.md) _(extra)_ | Pretrained models, fine-tuning, PEFT/LoRA | transformers, datasets, peft |
 
 ### Cloud & Deployment
 
 | Skill | Description | Key Libraries |
 |-------|-------------|---------------|
-| [AWS SageMaker](aws-sagemaker.md) | ML training and deployment on AWS | sagemaker, boto3 |
+| [AWS SageMaker](aws-sagemaker.md) _(extra)_ | ML training and deployment on AWS | sagemaker, boto3 |
 | [FastAPI](fastapi.md) | ML model serving APIs | FastAPI, uvicorn |
-| [Kubernetes](kubernetes.md) | ML service deployment and orchestration on K8s | kubectl, helm |
-| [Gradio](gradio.md) | Interactive ML model demos and prototypes | Gradio |
+| [Kubernetes](kubernetes.md) _(extra)_ | ML service deployment and orchestration on K8s | kubectl, helm |
+| [Gradio](gradio.md) _(extra)_ | Interactive ML model demos and prototypes | Gradio |
 
 ### Infrastructure & DevOps
 

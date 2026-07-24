@@ -61,13 +61,63 @@ uv run mypy src/whet/ tests/ --strict
 
 ## How to Add a New Skill
 
-1. Create `skills/<name>/SKILL.md` — Must start with YAML frontmatter (`name`, `description`), be >500 chars, include code examples and headers
-2. Create `skills/<name>/skill.toml` — Machine-readable metadata (category, tags, deps, compatibility)
+1. Create `skills/<name>/SKILL.md` — YAML frontmatter (`name`, `description`), >500 chars, code examples and headers
+2. Create `skills/<name>/skill.toml` — Machine-readable metadata (category, tier, tags, deps, compatibility)
 3. Create `skills/<name>/README.md` — Must explain purpose (include words like "when", "use", "purpose")
 4. Create `docs/skills/<name>.md` — Documentation page (Purpose, When to Use, Key Patterns, Anti-Patterns)
 5. Add nav entry to `mkdocs.yml` under Skills section
 
 Tests discover skills dynamically — no hardcoded lists to update.
+
+### Writing the `description` (this is the trigger)
+
+Only the frontmatter is preloaded; the `description` is the entire discovery mechanism.
+Write it third-person and trigger-first, and be a little "pushy":
+
+```
+description: >
+  Use this skill when <concrete situations>. Reach for it any time you would otherwise
+  <the manual thing>, even if the user doesn't say "<tool>" explicitly. Not for
+  <adjacent thing> (see <other-skill>).
+```
+
+Always disambiguate against adjacent skills so two skills never compete for the same trigger.
+
+### Progressive disclosure (keep SKILL.md thin)
+
+A SKILL.md loads fully into context when triggered and **stays there for the session**, so
+every line is a recurring token cost. Structure a skill as an index plus on-demand detail:
+
+```
+skills/<name>/
+├── SKILL.md          # ~120-200 line index: core patterns, conventions, anti-patterns
+└── references/       # topic files, loaded only when needed
+    ├── <topic-a>.md
+    └── <topic-b>.md
+```
+
+Rules:
+- Keep `SKILL.md` **under 500 lines** (target 120–200 for a split skill).
+- Keep the 80%-case patterns, conventions, and anti-patterns **inline**; move depth to `references/`.
+- End `SKILL.md` with a `## Deep dives` list giving each reference a *"read this when…"* trigger.
+- **One level deep only** — a reference file must never link to another reference file.
+- Reference files over 100 lines start with a table of contents; name them descriptively.
+
+The installer copies `references/` for directory-based platforms (Claude, Antigravity) and
+inlines them for flat-file platforms (Cursor, Copilot), so no content is lost either way.
+
+### Core vs extra tier
+
+`tier = "core"` (default) installs with `whet install`. `tier = "extra"` marks a skill as
+opt-in — it is skipped unless the user passes `--include-extras`. Use `extra` for skills
+that are real but outside the flagship path, so they don't dilute the default trigger surface.
+
+## Companion skills (not shipped by whet)
+
+whet does not ship a general product-UI ruleset — `gradio` covers ML demos only. For
+application/dashboard UI work, use the external **`interface-design`** skill alongside whet.
+If its `references/` directory is missing from your install, its "Deep dives" links will not
+resolve — reinstall it with the reference files present.
 
 ## How to Add a New Archetype
 
@@ -98,7 +148,8 @@ description: >
 [skill]
 name = "skill-name"
 version = "1.0.0"
-category = "cv-ml"  # core | cv-ml | infra | experiment-tracking
+category = "cv-ml"  # core | cv-ml | infra | cloud | experiment-tracking
+tier = "core"       # core (default, installed) | extra (opt-in via --include-extras)
 tags = ["tag1", "tag2"]
 
 [dependencies]

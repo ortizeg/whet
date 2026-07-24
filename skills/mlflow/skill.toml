@@ -2,6 +2,7 @@
 name = "mlflow"
 version = "1.0.0"
 category = "experiment-tracking"
+tier = "extra"
 tags = ["experiment-tracking", "model-registry", "mlflow", "deployment"]
 
 [dependencies]

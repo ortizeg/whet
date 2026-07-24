@@ -2,6 +2,7 @@
 name = "aws-sagemaker"
 version = "1.0.0"
 category = "cloud"
+tier = "extra"
 tags = ["aws", "sagemaker", "training", "deployment", "cloud", "mlops"]
 
 [dependencies]

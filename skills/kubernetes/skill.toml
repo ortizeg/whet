@@ -2,6 +2,7 @@
 name = "kubernetes"
 version = "1.0.0"
 category = "infra"
+tier = "extra"
 tags = ["kubernetes", "k8s", "deployment", "orchestration", "helm"]
 
 [dependencies]

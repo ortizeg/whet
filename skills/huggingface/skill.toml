@@ -2,6 +2,7 @@
 name = "huggingface"
 version = "1.0.0"
 category = "cv-ml"
+tier = "extra"
 tags = ["transformers", "datasets", "fine-tuning", "pretrained", "nlp", "vision"]
 
 [dependencies]
