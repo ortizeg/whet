@@ -203,3 +203,18 @@ def test_rendered_project_has_src_layout_and_tests(
     assert (root / "pyproject.toml").is_file(), f"{archetype.path.name}: no pyproject.toml"
     assert (root / "src").is_dir(), f"{archetype.path.name}: not src-layout"
     assert (root / "tests").is_dir(), f"{archetype.path.name}: no tests/ directory"
+
+
+def test_notebooks_are_substitutable() -> None:
+    """`.ipynb` must be treated as text so `${package_name}` renders inside notebooks.
+
+    Notebooks are JSON, so substitution is safe. When they were excluded, a template
+    notebook importing from `${package_name}` shipped the literal placeholder — and
+    then tripped test_render_leaves_no_unsubstituted_variables with a confusing
+    failure pointing at the notebook rather than at the engine.
+    """
+    from whet.scaffold.engine import _is_text_file
+
+    assert _is_text_file(Path("notebooks/01-explore.ipynb")), (
+        ".ipynb must be substitutable; otherwise notebooks ship literal ${...} placeholders"
+    )

@@ -232,6 +232,9 @@ def _is_text_file(path: Path) -> bool:
         ".yaml",
         ".yml",
         ".json",
+        # Notebooks are JSON, so substitution is safe and lets a template notebook
+        # import from `${package_name}` directly instead of resolving it at runtime.
+        ".ipynb",
         ".cfg",
         ".ini",
         ".sh",
