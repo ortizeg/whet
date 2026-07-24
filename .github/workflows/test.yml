@@ -57,3 +57,6 @@ jobs:
 
       - name: Validate archetype skill composition
         run: uv run pytest tests/test_archetypes.py -v
+
+      - name: Enforce skill-authoring rules
+        run: uv run pytest tests/test_skill_hygiene.py -v
