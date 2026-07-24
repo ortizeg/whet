@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -84,7 +85,7 @@ def test_cache_hit_skips_the_fetcher(make_local_card: MakeCard, tmp_path: Path) 
     assert download_weights(card, cache_dir=cache, fetcher=exploding_fetcher).exists()
 
 
-def test_injected_fetcher_is_used(card_template: dict[str, object], tmp_path: Path) -> None:
+def test_injected_fetcher_is_used(card_template: dict[str, Any], tmp_path: Path) -> None:
     payload = b"bytes-from-an-injected-fetcher"
     weights = {
         "url": "https://models.example.com/tiny-net.pth",

@@ -9,7 +9,12 @@ from pydantic import BaseModel, Field
 
 from ${package_name}.config import PipelineConfig
 from ${package_name}.manifest import manifest_fingerprint
-from ${package_name}.stages import stage_ingest, stage_split, stage_validate, stage_write
+from ${package_name}.stages import (
+    stage_ingest,
+    stage_split,
+    stage_validate,
+    stage_write,
+)
 
 
 class PipelineResult(BaseModel, frozen=True):

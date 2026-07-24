@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -42,13 +43,13 @@ def test_missing_version_raises(registry: ModelRegistry) -> None:
         registry.get("resnet50", "9.9.9")
 
 
-def test_highest_version_wins(card_template: dict[str, object]) -> None:
+def test_highest_version_wins(card_template: dict[str, Any]) -> None:
     older = ModelCard.model_validate({**card_template, "version": "1.9.0"})
     newer = ModelCard.model_validate({**card_template, "version": "1.10.0"})
     assert ModelRegistry([older, newer]).get("tiny-net").version == "1.10.0"
 
 
-def test_duplicate_cards_rejected(card_template: dict[str, object]) -> None:
+def test_duplicate_cards_rejected(card_template: dict[str, Any]) -> None:
     card = ModelCard.model_validate(card_template)
     with pytest.raises(DuplicateModelError):
         ModelRegistry([card, card])

@@ -21,7 +21,12 @@ from ${package_name}.manifest import (
     write_manifest,
 )
 from ${package_name}.pipeline import PipelineResult, run_pipeline
-from ${package_name}.quality import QualityIssue, QualityReport, Severity, validate_manifest
+from ${package_name}.quality import (
+    QualityIssue,
+    QualityReport,
+    Severity,
+    validate_manifest,
+)
 from ${package_name}.splitting import (
     DataLeakageError,
     assert_no_group_leakage,

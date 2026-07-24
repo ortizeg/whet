@@ -25,7 +25,12 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
-    from ${package_name}.config import IngestConfig, OutputConfig, QualityConfig, SplitConfig
+    from ${package_name}.config import (
+        IngestConfig,
+        OutputConfig,
+        QualityConfig,
+        SplitConfig,
+    )
     from ${package_name}.manifest import ImageRecord
     from ${package_name}.quality import QualityReport
 

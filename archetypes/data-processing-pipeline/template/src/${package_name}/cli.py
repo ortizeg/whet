@@ -43,7 +43,7 @@ def build_parser() -> argparse.ArgumentParser:
     sample = subparsers.add_parser("sample", help="Write a synthetic raw dataset")
     sample.add_argument("--root", type=Path, default=Path("data/raw"))
     sample.add_argument("--labels", default=",".join(DEFAULT_LABELS))
-    sample.add_argument("--groups", type=int, default=4, help="Groups (clips) per label")
+    sample.add_argument("--groups", type=int, default=10, help="Groups (clips) per label")
     sample.add_argument("--frames", type=int, default=5, help="Frames per group")
 
     for name, description in (

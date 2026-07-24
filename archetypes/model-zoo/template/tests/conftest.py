@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -40,7 +41,7 @@ def registry(registry_dir: Path) -> ModelRegistry:
 
 
 @pytest.fixture
-def card_template() -> dict[str, object]:
+def card_template() -> dict[str, Any]:
     """A minimal, valid model-card payload for mutation in tests."""
     return {
         "name": "tiny-net",
@@ -67,9 +68,7 @@ def local_weights(tmp_path: Path) -> Iterator[Path]:
 
 
 @pytest.fixture
-def make_local_card(
-    local_weights: Path, card_template: dict[str, object]
-) -> Callable[..., ModelCard]:
+def make_local_card(local_weights: Path, card_template: dict[str, Any]) -> Callable[..., ModelCard]:
     """Build a card whose weights URL is a ``file://`` path to ``local_weights``."""
 
     def factory(*, sha256: str | None = None) -> ModelCard:

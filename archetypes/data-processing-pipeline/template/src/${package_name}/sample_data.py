@@ -43,7 +43,7 @@ def _colour_for(key: str) -> tuple[int, int, int]:
 def generate_sample_dataset(
     root: Path,
     labels: tuple[str, ...] = DEFAULT_LABELS,
-    groups_per_label: int = 4,
+    groups_per_label: int = 10,
     frames_per_group: int = 5,
     size: int = 8,
 ) -> int:

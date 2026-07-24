@@ -20,9 +20,12 @@ pixi.lock
 htmlcov/
 coverage.xml
 
-# Data — bulk data never lives in Git. Track the manifest fingerprint instead.
-data/
-!data/**/dataset.json
+# Data — bulk data never lives in Git; only the fingerprinted dataset card does.
+# (A directory cannot be un-ignored from within, hence the parent-by-parent form.)
+/data/*
+!/data/processed/
+/data/processed/*
+!/data/processed/dataset.json
 
 # Reports
 reports/
