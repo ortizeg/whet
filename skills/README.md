@@ -14,7 +14,7 @@ Each skill includes:
 | Skill | Purpose |
 |-------|---------|
 | `master-skill` | Meta-skill for project initialization |
-| `pydantic-strict` | Pydantic V2 for configs and data structures |
+| `pydantic` | Pydantic V2 for configs and data structures |
 | `code-quality` | Ruff + mypy enforcement |
 | `testing` | Pytest patterns and coverage |
 | `pre-commit` | Git hooks setup |
@@ -48,7 +48,6 @@ Each skill includes:
 | `wandb` | Weights & Biases |
 | `mlflow` | MLflow tracking |
 | `tensorboard` | TensorBoard logging |
-| `dvc` | Data versioning |
 
 ### Meta
 | Skill | Purpose |

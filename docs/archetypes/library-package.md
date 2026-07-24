@@ -9,31 +9,39 @@ This archetype creates a well-structured Python package that can be published to
 ## Directory Structure
 
 ```
-{{project_slug}}/
-├── src/{{package_name}}/
-│   ├── __init__.py            # Public API exports
-│   ├── py.typed               # PEP 561 type marker
-│   ├── core/
-│   │   ├── __init__.py
-│   │   └── module.py
-│   ├── utils/
-│   │   ├── __init__.py
-│   │   └── helpers.py
-│   └── types.py               # Public type definitions
+${project_slug}/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       ├── docs.yml
+│       └── publish.yml
 ├── docs/
-│   ├── mkdocs.yml
-│   ├── index.md
-│   ├── api/                   # Auto-generated API docs
-│   └── guides/
+│   ├── api.md
+│   ├── getting-started.md
+│   └── index.md
+├── examples/
+│   └── basic_usage.py
+├── src/
+│   └── ${package_name}/
+│       ├── __init__.py
+│       ├── cli.py
+│       ├── config.py
+│       ├── core.py
+│       └── py.typed
 ├── tests/
+│   ├── __init__.py
 │   ├── conftest.py
-│   ├── test_core.py
-│   └── test_utils.py
-├── .github/workflows/
-│   ├── test.yml
-│   ├── docs.yml
-│   └── release.yml            # PyPI publishing
-└── ...
+│   ├── test_cli.py
+│   ├── test_config.py
+│   └── test_core.py
+├── .gitignore
+├── .pre-commit-config.yaml
+├── CHANGELOG.md
+├── LICENSE.txt
+├── README.md
+├── mkdocs.yml
+├── pixi.toml
+└── pyproject.toml
 ```
 
 ## Key Features
@@ -48,13 +56,13 @@ This archetype creates a well-structured Python package that can be published to
 
 ```bash
 # Install in development mode
-uv run pip install -e ".[dev]"
+pixi install
 
 # Run tests
-uv run test
+pytest
 
 # Build package
-uv run python -m build
+python -m build
 
 # Publish to PyPI (via GitHub Actions on tag)
 git tag v0.1.0 && git push --tags

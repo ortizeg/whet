@@ -1,0 +1,15 @@
+[skill]
+name = "pydantic"
+version = "1.0.0"
+category = "core"
+tags = ["validation", "config", "pydantic", "data-models"]
+
+[dependencies]
+requires = []
+recommends = ["master-skill"]
+
+[compatibility]
+python = ">=3.11"
+
+[compatibility.libraries]
+pydantic = ">=2.0"

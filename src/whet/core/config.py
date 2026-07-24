@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import json
 from enum import Enum
 from pathlib import Path
 
 from pydantic import BaseModel, Field
+
+from whet.core.paths import bundled_dir
+
+CONFIG_PATH = Path.home() / ".config" / "whet" / "config.json"
 
 
 class Platform(str, Enum):
@@ -48,11 +53,22 @@ class WhetConfig(BaseModel):
     """Whet configuration persisted to disk."""
 
     target: Platform = Platform.CLAUDE
-    skills_dir: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[3] / "skills")
-    agents_dir: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[3] / "agents")
-    archetypes_dir: Path = Field(
-        default_factory=lambda: Path(__file__).resolve().parents[3] / "archetypes"
-    )
+    skills_dir: Path = Field(default_factory=lambda: bundled_dir("skills"))
+    archetypes_dir: Path = Field(default_factory=lambda: bundled_dir("archetypes"))
+
+    @classmethod
+    def load(cls) -> WhetConfig:
+        """Load config from disk, falling back to defaults."""
+        if CONFIG_PATH.exists():
+            data = json.loads(CONFIG_PATH.read_text())
+            return cls(**data)
+        return cls()
+
+    def save(self) -> None:
+        """Persist user-set values to disk."""
+        CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        data = {"target": self.target.value}
+        CONFIG_PATH.write_text(json.dumps(data, indent=2) + "\n")
 
     def get_platform_paths(self) -> PlatformPaths:
         """Get paths for the current target platform."""

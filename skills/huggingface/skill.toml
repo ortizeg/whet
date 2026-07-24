@@ -2,10 +2,11 @@
 name = "huggingface"
 version = "1.0.0"
 category = "cv-ml"
+tier = "extra"
 tags = ["transformers", "datasets", "fine-tuning", "pretrained", "nlp", "vision"]
 
 [dependencies]
-requires = ["pydantic-strict", "loguru"]
+requires = ["pydantic", "loguru"]
 recommends = ["pytorch-lightning", "wandb", "onnx", "fastapi"]
 
 [compatibility]

@@ -1,8 +1,0 @@
-[agent]
-name = "code-review"
-version = "1.0.0"
-type = "blocking"
-tags = ["code-review", "quality", "ci-cd", "enforcement"]
-
-[ci]
-has_action = true

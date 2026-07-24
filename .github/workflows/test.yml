@@ -31,3 +31,32 @@ jobs:
 
       - name: Run type checking
         run: uv run mypy src/whet/ tests/ --strict
+
+  archetypes:
+    # Renders every archetype and verifies the *generated* project is usable.
+    # Without this, a template can ship code that never imports, crashes on the
+    # first step, or fails its own lint gate — none of which the unit tests notice.
+    name: Archetypes render and pass their own gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Render each archetype and validate the generated project
+        run: uv run pytest tests/test_archetype_templates.py -v
+
+      - name: Validate archetype skill composition
+        run: uv run pytest tests/test_archetypes.py -v
+
+      - name: Enforce skill-authoring rules
+        run: uv run pytest tests/test_skill_hygiene.py -v

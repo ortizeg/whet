@@ -1,20 +1,39 @@
 ---
 name: docker-cv
 description: >
-  Build optimized Docker images for computer vision and deep learning workloads.
-  Covers CUDA support, multi-stage builds, layer caching, security best practices,
-  and GPU-accelerated container deployment.
+  Use this skill when writing or optimizing a Dockerfile for computer vision or deep
+  learning — CUDA/GPU base images, multi-stage builds, layer caching, slim inference
+  images, non-root security, and shrinking bloated CV images. Reach for it any time
+  you'd otherwise hand-write a GPU Dockerfile or debug a container that won't see the
+  GPU, even if the user just says "containerize this model". For deploying the resulting
+  containers to a cluster see kubernetes; for cloud image registries see gcp and
+  aws-sagemaker.
 ---
 
 # Docker CV Skill
 
-Build optimized Docker images for computer vision and deep learning workloads with CUDA support, multi-stage builds, and security best practices.
+Build optimized Docker images for computer vision and deep learning workloads with CUDA
+support, multi-stage builds, and security best practices. This page holds the canonical
+pixi + CUDA Dockerfile that archetype templates follow; the deep dives cover GPU
+specifics, caching, hardening, and Compose.
 
-## Multi-Stage Build Strategy
+## Choosing a containerization approach
 
-Use separate stages to minimize final image size and maximize layer cache reuse.
+```
+Need to package an ML application?
+├── Single model serving → Dockerfile with multi-stage build
+├── Multiple models/services → Docker Compose for local, K8s for prod
+├── GPU required?
+│   ├── Training → NVIDIA base images (nvcr.io/nvidia/pytorch)
+│   └── Inference → optimized runtime images (NVIDIA Triton, TorchServe)
+└── No GPU → Python slim base image
+```
 
-### Training Dockerfile
+## The canonical multi-stage pixi Dockerfile
+
+Base stage for CUDA and system libraries, dependencies stage for pixi, leaf stages for
+training and inference. Dependency files are copied before source so `pixi install` stays
+cached.
 
 ```dockerfile
 # ==============================================================================
@@ -73,159 +92,10 @@ ENTRYPOINT ["pixi", "run", "python", "-m"]
 CMD ["my_project.train"]
 ```
 
-### Inference Dockerfile
+Build a specific stage with `docker build --target training -t myproject:train .`.
+The slim inference stage lives in `references/multi-stage-builds.md`.
 
-```dockerfile
-# ==============================================================================
-# Slim inference image — no CUDA SDK, just runtime
-# ==============================================================================
-FROM python:3.11-slim AS inference
-
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# Install only production dependencies
-COPY requirements-inference.txt ./
-RUN pip install --no-cache-dir -r requirements-inference.txt
-
-# Copy application code and model
-COPY src/ src/
-COPY models/ models/
-
-# Non-root user
-RUN useradd -m -u 1000 appuser
-USER appuser
-
-# Health check for inference service
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-EXPOSE 8000
-CMD ["uvicorn", "src.serve:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-## Docker Compose
-
-### Training with GPU
-
-```yaml
-# docker-compose.yml
-services:
-  train:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: training
-    volumes:
-      - ./data:/app/data:ro          # Read-only data mount
-      - ./checkpoints:/app/checkpoints  # Writable checkpoint output
-      - ./configs:/app/configs:ro    # Config overrides
-    environment:
-      - WANDB_API_KEY=${WANDB_API_KEY}
-      - CUDA_VISIBLE_DEVICES=0,1
-    shm_size: "8gb"  # Required for DataLoader num_workers > 0
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    command: ["my_project.train", "experiment=baseline"]
-
-  tensorboard:
-    image: tensorflow/tensorflow:latest
-    ports:
-      - "6006:6006"
-    volumes:
-      - ./outputs/logs:/logs:ro
-    command: ["tensorboard", "--logdir=/logs", "--bind_all"]
-
-  inference:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: inference
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./models:/app/models:ro
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-```
-
-## .dockerignore
-
-```
-# .dockerignore for ML projects
-.git/
-.github/
-.vscode/
-.mypy_cache/
-.pytest_cache/
-.ruff_cache/
-__pycache__/
-*.pyc
-
-# Data and artifacts (mount as volumes instead)
-data/
-checkpoints/
-outputs/
-wandb/
-mlruns/
-lightning_logs/
-
-# Large model files (copy explicitly if needed)
-*.pt
-*.pth
-*.onnx
-*.pkl
-
-# Documentation and tests
-docs/
-tests/
-*.md
-!README.md
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Environment
-.env
-.venv/
-.pixi/
-```
-
-## Layer Ordering for Cache Optimization
-
-Order your Dockerfile layers from least-frequently-changed to most-frequently-changed:
-
-```
-1. Base image + system packages     (rarely changes)
-2. Package manager install          (rarely changes)
-3. Dependency files (pixi.toml)     (changes with new deps)
-4. pip install / pixi install       (depends on step 3)
-5. pyproject.toml                   (changes occasionally)
-6. Source code (src/)               (changes every commit)
-7. Configs and scripts              (changes frequently)
-```
-
-This maximizes Docker's layer cache reuse. When only source code changes, steps 1-4 are cached.
-
-## Base Image Selection
+## Base image selection
 
 | Use Case | Base Image | Size |
 |----------|-----------|------|
@@ -235,104 +105,7 @@ This maximizes Docker's layer cache reuse. When only source code changes, steps 
 | Inference (CPU) | `python:3.11-slim` | ~150 MB |
 | Development | `nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04` | ~5.2 GB |
 
-## Security Best Practices
-
-### Non-Root User
-
-```dockerfile
-# Always create and switch to a non-root user
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
-USER appuser
-```
-
-### No Secrets in Images
-
-```dockerfile
-# ❌ WRONG: Secret baked into image layer
-ENV WANDB_API_KEY=my-secret-key
-COPY .env /app/.env
-
-# ✅ CORRECT: Pass at runtime
-# docker run -e WANDB_API_KEY=$WANDB_API_KEY my-image
-# docker-compose with env_file or environment
-```
-
-### Read-Only Filesystem
-
-```yaml
-# docker-compose.yml
-services:
-  inference:
-    read_only: true
-    tmpfs:
-      - /tmp
-    volumes:
-      - ./models:/app/models:ro
-```
-
-## Multi-Platform Builds
-
-```bash
-# Build for both AMD64 and ARM64
-docker buildx build \
-    --platform linux/amd64,linux/arm64 \
-    --tag myproject:latest \
-    --push .
-```
-
-## Health Checks
-
-```dockerfile
-# HTTP health check for API services
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-# File-based health check for training containers
-HEALTHCHECK --interval=60s --timeout=5s --retries=3 \
-    CMD test -f /tmp/training_alive || exit 1
-```
-
-## Common Issues
-
-### DataLoader Crashes
-
-If `DataLoader` with `num_workers > 0` crashes with shared memory errors:
-
-```yaml
-# Increase shared memory size
-services:
-  train:
-    shm_size: "8gb"  # Default is 64MB, way too small
-```
-
-### CUDA Version Mismatch
-
-Always pin CUDA versions and document driver requirements:
-
-```dockerfile
-# Pin specific CUDA version
-FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
-
-# Document minimum driver version in README
-# Requires NVIDIA driver >= 550.54.15
-```
-
-### Large Image Sizes
-
-```dockerfile
-# ✅ Combine RUN commands to reduce layers
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends pkg1 pkg2 && \
-    rm -rf /var/lib/apt/lists/*
-
-# ❌ Separate RUN creates extra layers
-RUN apt-get update
-RUN apt-get install -y pkg1
-RUN apt-get install -y pkg2
-```
-
-## Best Practices
+## Conventions
 
 1. **Always use multi-stage builds** -- separate training from inference
 2. **Pin base image versions** -- never use `latest` in production
@@ -344,3 +117,27 @@ RUN apt-get install -y pkg2
 8. **Add health checks** -- especially for inference containers
 9. **Use `--no-install-recommends`** -- minimize system package installs
 10. **Clean up in the same layer** -- `rm -rf /var/lib/apt/lists/*` after `apt-get`
+
+## Anti-patterns
+
+- **`COPY . .` before installing dependencies** — invalidates the dependency layer on
+  every source edit; copy `pixi.toml`/`pixi.lock` first, then run `pixi install`.
+- **Default shared memory** — the 64 MB default kills `DataLoader` workers; set
+  `shm_size: "8gb"` (or `--shm-size=8g`).
+- **Secrets in `ENV` or a copied `.env`** — every layer is retained and readable with
+  `docker history`; pass secrets at runtime instead.
+- **`devel` CUDA images in production** — the CUDA SDK adds ~1.7 GB and is build-time
+  only; ship a `runtime` variant.
+- **Cleanup in a separate `RUN`** — `rm -rf /var/lib/apt/lists/*` only shrinks the image
+  when it runs in the same layer as `apt-get install`.
+- **Baking datasets or checkpoints into the image** — mount them as volumes.
+- **Running as root** — create and switch to a non-root user before the entrypoint.
+- **Unpinned CUDA tags** — pin the full version and document the minimum NVIDIA driver.
+
+## Deep dives
+
+- `references/multi-stage-builds.md` — read when writing the full Dockerfile, adding the slim inference stage, or deciding which stages a workload needs.
+- `references/cuda-and-gpu.md` — read when picking a CUDA tag, hitting a driver/CUDA mismatch, a container that can't see the GPU, or DataLoader shared-memory crashes.
+- `references/layer-caching.md` — read when build times or image size need optimizing, or when writing `.dockerignore`.
+- `references/security-and-slim-images.md` — read when hardening a container: non-root users, secret handling, read-only filesystems, health checks, and trimming the serving image.
+- `references/compose.md` — read when standing up a local multi-service stack (training + TensorBoard + inference) with GPU reservations.

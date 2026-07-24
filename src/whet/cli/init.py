@@ -34,12 +34,19 @@ def init_project(
     author: str | None = typer.Option(  # noqa: UP007
         None, "--author", "-a", help="Author name."
     ),
+    with_recommended: bool = typer.Option(
+        False, "--with-recommended", help="Also install the archetype's recommended skills."
+    ),
+    no_skills: bool = typer.Option(
+        False, "--no-skills", help="Scaffold files only; do not install the archetype's skills."
+    ),
 ) -> None:
     """Scaffold a new project from an archetype template.
 
-    Without arguments, lists available archetypes.
+    Installs the archetype's required skills into the new project so it is usable
+    immediately. Without arguments, lists available archetypes.
     """
-    cfg = WhetConfig()
+    cfg = WhetConfig.load()
 
     if archetype_name is None:
         _list_archetypes(cfg)
@@ -74,19 +81,53 @@ def init_project(
 
     console.print(f"[bold green]✓ Project scaffolded at {dest}[/bold green]\n")
 
-    # Show required skills
-    if archetype.skills.required:
-        console.print("[bold]Required skills:[/bold]")
-        for skill in archetype.skills.required:
-            console.print(f"  - {skill}")
-        console.print(
-            f"\nRun: [bold]cd {dest.name} && whet add {' '.join(archetype.skills.required)}[/bold]"
-        )
+    wanted = list(archetype.skills.required)
+    if with_recommended:
+        wanted += [s for s in archetype.skills.recommended if s not in wanted]
 
-    if archetype.skills.recommended:
-        console.print("\n[bold]Recommended skills:[/bold]")
+    if no_skills:
+        if wanted:
+            console.print("[bold]Skills for this archetype (not installed):[/bold]")
+            for skill in wanted:
+                console.print(f"  - {skill}")
+            console.print(f"\nRun: [bold]cd {dest.name} && whet add {' '.join(wanted)}[/bold]")
+    elif wanted:
+        _install_skills(cfg, wanted, dest)
+
+    if archetype.skills.recommended and not with_recommended:
+        console.print("\n[bold]Recommended skills[/bold] [dim](--with-recommended)[/dim]")
         for skill in archetype.skills.recommended:
             console.print(f"  - {skill}")
+
+
+def _install_skills(cfg: WhetConfig, names: list[str], dest: Path) -> None:
+    """Install the archetype's skills into the scaffolded project.
+
+    An archetype's value over a plain folder copy is the skill set it composes, so
+    scaffolding without installing them left the most important part as homework.
+    """
+    from whet.cli.skills import _get_adapter
+    from whet.core.config import PLATFORM_PATHS
+    from whet.registry.loader import load_skill
+
+    adapter = _get_adapter(cfg.target)
+    target_dir = dest / PLATFORM_PATHS[cfg.target].local_dir
+
+    console.print(f"[bold]Installing {len(names)} skills...[/bold]")
+    missing: list[str] = []
+    for name in names:
+        skill = load_skill(cfg.skills_dir, name)
+        if skill is None:
+            missing.append(name)
+            continue
+        adapter.install_skill(skill, target_dir)
+        console.print(f"  [green]✓[/green] {name}")
+
+    if missing:
+        # A dangling name means archetype.toml drifted from the skill library.
+        console.print(f"  [yellow]![/yellow] not found: {', '.join(missing)}")
+
+    console.print(f"\n[bold green]✓ Installed {len(names) - len(missing)} skills[/bold green]")
 
 
 def _list_archetypes(cfg: WhetConfig) -> None:

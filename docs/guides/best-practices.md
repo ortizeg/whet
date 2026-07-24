@@ -112,7 +112,7 @@ print(f"Training started with lr={lr}")
 
 ## Data Management
 
-- **DVC** for versioning large datasets and model weights
+- **Object storage plus a versioned manifest** for large datasets and model weights -- keep the bulk data out of Git
 - **Pydantic** for validating data schemas
 - **Explicit splits** -- never let data leak between train/val/test
 - **Data validation** -- check for corrupted images, missing labels, class imbalance

@@ -1,46 +1,41 @@
 # Data Processing Pipeline
 
-ETL workflows for dataset preparation, transformation, and validation with parallel processing and DVC integration.
+ETL workflows for dataset preparation, transformation, and validation with parallel processing and dataset versioning.
 
 ## Purpose
 
-This archetype structures dataset processing as a series of well-defined stages: download, preprocess, validate, split, and package. Each stage is a self-contained module with Pydantic-validated configuration, making pipelines reproducible and composable. DVC tracks large data assets, and parallel processing handles large-scale datasets efficiently.
+This archetype structures dataset processing as a series of well-defined stages: download, preprocess, validate, split, and package. Each stage is a self-contained module with Pydantic-validated configuration, making pipelines reproducible and composable. Large data assets live in object storage and are tracked by a content-hashed manifest, and parallel processing handles large-scale datasets efficiently.
 
 ## Directory Structure
 
 ```
-{{project_slug}}/
-├── src/{{package_name}}/
-│   ├── __init__.py
-│   ├── pipeline.py            # Pipeline orchestrator
-│   ├── stages/
-│   │   ├── __init__.py
-│   │   ├── base.py            # Abstract stage interface
-│   │   ├── download.py
-│   │   ├── preprocess.py
-│   │   ├── validate.py
-│   │   ├── split.py
-│   │   └── export.py
-│   ├── transforms/
-│   │   ├── __init__.py
-│   │   └── image.py
-│   └── schemas/
+${project_slug}/
+├── conf/
+│   └── pipeline.toml
+├── src/
+│   └── ${package_name}/
 │       ├── __init__.py
-│       └── dataset.py         # Pydantic data schemas
-├── configs/
-│   ├── pipeline.yaml
-│   └── stages/
-│       ├── download.yaml
-│       └── preprocess.yaml
-├── data/
-│   ├── raw/
-│   ├── processed/
-│   └── splits/
-├── dvc.yaml                   # DVC pipeline definition
+│       ├── __main__.py
+│       ├── cli.py
+│       ├── config.py
+│       ├── manifest.py
+│       ├── pipeline.py
+│       ├── py.typed
+│       ├── quality.py
+│       ├── sample_data.py
+│       ├── splitting.py
+│       └── stages.py
 ├── tests/
-│   ├── test_stages.py
-│   └── test_pipeline.py
-└── ...
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── test_manifest.py
+│   ├── test_pipeline.py
+│   ├── test_quality.py
+│   └── test_splitting.py
+├── .gitignore
+├── README.md
+├── pixi.toml
+└── pyproject.toml
 ```
 
 ## Pipeline Stage Interface
@@ -65,13 +60,10 @@ class Stage(ABC):
 
 ```bash
 # Run full pipeline
-uv run python -m my_project.pipeline
+python -m my_project.pipeline
 
 # Run single stage
-uv run python -m my_project.pipeline stage=preprocess
-
-# Reproduce with DVC
-dvc repro
+python -m my_project.pipeline stage=preprocess
 ```
 
 ## Customization
@@ -79,4 +71,4 @@ dvc repro
 - Add new stages in `src/{{package_name}}/stages/`
 - Define stage configs in `configs/stages/`
 - Add image transforms in `transforms/`
-- Configure DVC remotes for data storage
+- Configure the object storage bucket and prefix used for dataset artifacts

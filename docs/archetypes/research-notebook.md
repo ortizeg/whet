@@ -9,28 +9,39 @@ This archetype provides a structured notebook environment for ML research and ex
 ## Directory Structure
 
 ```
-{{project_slug}}/
-├── notebooks/
-│   ├── 01_data_exploration.ipynb
-│   ├── 02_baseline_training.ipynb
-│   ├── 03_evaluation.ipynb
-│   └── utils.py               # Shared notebook utilities
-├── src/{{package_name}}/
-│   ├── __init__.py
-│   ├── models/
-│   ├── data/
-│   └── visualization/
-│       ├── __init__.py
-│       └── plots.py           # Reusable plotting functions
+${project_slug}/
 ├── data/
-│   ├── raw/
-│   └── processed/
+│   ├── processed/
+│   │   └── .gitkeep
+│   └── raw/
+│       └── .gitkeep
+├── notebooks/
+│   ├── 01-abc-explore-dataset.ipynb
+│   ├── README.md
+│   └── _template.ipynb
 ├── outputs/
 │   ├── figures/
-│   └── results/
+│   │   └── .gitkeep
+│   └── reports/
+│       └── .gitkeep
+├── src/
+│   └── ${package_name}/
+│       ├── __init__.py
+│       ├── config.py
+│       ├── data.py
+│       ├── py.typed
+│       └── viz.py
 ├── tests/
-│   └── test_utils.py
-└── ...
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── test_config.py
+│   ├── test_data.py
+│   └── test_viz.py
+├── .gitignore
+├── .pre-commit-config.yaml
+├── README.md
+├── pixi.toml
+└── pyproject.toml
 ```
 
 ## Notebook Conventions
@@ -45,13 +56,13 @@ This archetype provides a structured notebook environment for ML research and ex
 
 ```bash
 # Start Jupyter
-uv run jupyter lab
+jupyter lab
 
 # Convert notebook to script
-uv run jupyter nbconvert --to script notebooks/01_data_exploration.ipynb
+jupyter nbconvert --to script notebooks/01_data_exploration.ipynb
 
 # Run all notebooks headless (for CI)
-uv run pytest --nbmake notebooks/
+pytest --nbmake notebooks/
 ```
 
 ## Customization

@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Environments
+.venv/
+.pixi/
+.env
+
+# Tooling caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Downloaded model weights — never commit binaries, only their SHA-256 in the
+# model card. The default cache lives here when MODEL_WEIGHTS_CACHE is unset.
+.cache/
+*.pth
+*.pt
+*.onnx
+*.safetensors
+*.part
+
+# OS
+.DS_Store

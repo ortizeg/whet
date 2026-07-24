@@ -9,34 +9,31 @@ This archetype manages a collection of pretrained models with a unified API. Eac
 ## Directory Structure
 
 ```
-{{project_slug}}/
-├── src/{{package_name}}/
-│   ├── __init__.py
-│   ├── registry.py            # Model registry
-│   ├── base.py                # Abstract model interface
-│   ├── download.py            # Weight download manager
-│   ├── benchmark.py           # Benchmarking utilities
-│   ├── models/
-│   │   ├── __init__.py
-│   │   ├── resnet/
-│   │   │   ├── __init__.py
-│   │   │   ├── model.py
-│   │   │   └── MODEL_CARD.md
-│   │   └── efficientnet/
-│   │       ├── __init__.py
-│   │       ├── model.py
-│   │       └── MODEL_CARD.md
-│   └── configs/
+${project_slug}/
+├── registry/
+│   ├── resnet50.yaml
+│   └── yolov8n.yaml
+├── src/
+│   └── ${package_name}/
 │       ├── __init__.py
-│       └── model_configs.py   # Pydantic model configs
-├── benchmarks/
-│   ├── results/
-│   └── run_benchmarks.py
+│       ├── __main__.py
+│       ├── benchmark.py
+│       ├── download.py
+│       ├── model_card.py
+│       ├── py.typed
+│       └── registry.py
 ├── tests/
-│   ├── test_registry.py
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── test_benchmark.py
+│   ├── test_cli.py
 │   ├── test_download.py
-│   └── test_models.py
-└── ...
+│   ├── test_model_card.py
+│   └── test_registry.py
+├── .gitignore
+├── README.md
+├── pixi.toml
+└── pyproject.toml
 ```
 
 ## Registry API
@@ -70,13 +67,13 @@ Each model includes a `MODEL_CARD.md` documenting:
 
 ```bash
 # Run benchmarks
-uv run python benchmarks/run_benchmarks.py
+python benchmarks/run_benchmarks.py
 
 # Download all model weights
-uv run python -m my_project.download --all
+python -m my_project.download --all
 
 # Compare models
-uv run python -m my_project.benchmark --models resnet50,efficientnet_b0
+python -m my_project.benchmark --models resnet50,efficientnet_b0
 ```
 
 ## Customization

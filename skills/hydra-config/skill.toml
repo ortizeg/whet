@@ -5,7 +5,7 @@ category = "cv-ml"
 tags = ["configuration", "hydra", "omegaconf", "experiment-management"]
 
 [dependencies]
-requires = ["pydantic-strict"]
+requires = ["pydantic"]
 recommends = ["pytorch-lightning"]
 
 [compatibility]

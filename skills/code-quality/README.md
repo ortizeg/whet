@@ -22,7 +22,7 @@ Ruff handles three concerns in a single tool: Black-compatible formatting, isort
 
 ## Related Skills
 
-- **[Pydantic Strict](../pydantic-strict/)** -- mypy's Pydantic plugin validates model definitions statically, complementing runtime checks.
+- **[Pydantic](../pydantic/)** -- mypy's Pydantic plugin validates model definitions statically, complementing runtime checks.
 - **[Pixi](../pixi/)** -- defines task commands (`pixi run lint`, `pixi run typecheck`) that invoke Ruff and mypy with the correct flags.
 - **[GitHub Actions](../github-actions/)** -- runs code quality checks as a required CI step before merge.
 - **[VS Code](../vscode/)** -- configures editor extensions for Ruff and mypy to surface issues inline during development.

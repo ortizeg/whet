@@ -81,7 +81,7 @@ with mlflow.start_run(run_name="resnet50-baseline") as run:
 
 - Do not use the default `mlruns/` local directory in production -- configure a proper tracking URI
 - Do not register models without validation metrics -- always log metrics alongside the model
-- Avoid logging large artifacts (datasets, raw images) as run artifacts -- use DVC or cloud storage
+- Avoid logging large artifacts (datasets, raw images) as run artifacts -- keep them in cloud object storage and log a reference
 - Do not mix MLflow and W&B in the same project unless migrating
 
 ## Combines Well With
@@ -89,7 +89,6 @@ with mlflow.start_run(run_name="resnet50-baseline") as run:
 - **PyTorch Lightning** -- MLFlowLogger integrates with Lightning Trainer
 - **Hydra Config** -- Log resolved configs as run parameters
 - **Docker CV** -- MLflow tracking server in a container
-- **DVC** -- DVC manages data, MLflow manages experiments and models
 
 ## Full Reference
 

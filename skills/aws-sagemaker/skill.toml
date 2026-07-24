@@ -2,11 +2,12 @@
 name = "aws-sagemaker"
 version = "1.0.0"
 category = "cloud"
+tier = "extra"
 tags = ["aws", "sagemaker", "training", "deployment", "cloud", "mlops"]
 
 [dependencies]
-requires = ["pydantic-strict", "loguru"]
-recommends = ["pytorch-lightning", "docker-cv", "wandb", "dvc"]
+requires = ["pydantic", "loguru"]
+recommends = ["pytorch-lightning", "docker-cv", "wandb"]
 
 [compatibility]
 python = ">=3.11"

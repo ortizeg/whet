@@ -1,8 +1,0 @@
-[agent]
-name = "devops-infra"
-version = "1.0.0"
-type = "advisory"
-tags = ["devops", "infrastructure", "docker", "kubernetes", "cicd", "cloud"]
-
-[ci]
-has_action = false

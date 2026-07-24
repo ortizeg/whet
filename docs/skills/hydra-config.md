@@ -106,7 +106,7 @@ if __name__ == "__main__":
 
 - **PyTorch Lightning** -- Configure Trainer, model, and data through Hydra
 - **W&B / MLflow** -- Log resolved configs as experiment parameters
-- **Pydantic Strict** -- Structured configs with validation
+- **Pydantic** -- Structured configs with validation
 - **Testing** -- Test config composition and resolution
 
 ## Full Reference

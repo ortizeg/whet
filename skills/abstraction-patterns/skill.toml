@@ -5,7 +5,7 @@ category = "core"
 tags = ["design-patterns", "abc", "protocol", "architecture"]
 
 [dependencies]
-requires = ["pydantic-strict"]
+requires = ["pydantic"]
 recommends = ["master-skill"]
 
 [compatibility]

@@ -7,7 +7,7 @@ from rich.console import Console
 
 from whet.adapters.detect import detect_platform
 from whet.cli import app
-from whet.core.config import PLATFORM_PATHS, Platform
+from whet.core.config import PLATFORM_PATHS, Platform, WhetConfig
 
 console = Console()
 
@@ -21,6 +21,9 @@ def target(
     Without arguments, shows the current target and auto-detected platform.
     """
     if platform:
+        cfg = WhetConfig.load()
+        cfg = cfg.model_copy(update={"target": platform})
+        cfg.save()
         paths = PLATFORM_PATHS[platform]
         console.print(f"[bold green]✓ Target set to {platform.value}[/bold green]")
         console.print(f"  Global: {paths.global_dir}")
@@ -28,7 +31,9 @@ def target(
         return
 
     # Show current state
+    cfg = WhetConfig.load()
     detected = detect_platform()
+    console.print(f"[bold]Current target:[/bold] [cyan]{cfg.target.value}[/cyan]\n")
     console.print("[bold]Platform Detection[/bold]\n")
 
     if detected:

@@ -6,5 +6,5 @@ tags = ["package", "library", "pypi", "reusable"]
 description = "Reusable Python package for PyPI distribution"
 
 [skills]
-required = ["pydantic-strict", "code-quality", "testing", "pypi", "loguru"]
-recommended = ["github-actions", "pre-commit"]
+required = ["pydantic", "code-quality", "testing", "pypi", "loguru", "pixi"]
+recommended = ["abstraction-patterns", "library-review", "github-actions", "pre-commit"]

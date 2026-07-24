@@ -1,4 +1,9 @@
 max_epochs: 50
 accelerator: auto
-precision: 16-mixed
+devices: auto
+# Switch to "16-mixed" (CUDA) or "bf16-mixed" (Ampere+/CPU) once on real hardware.
+precision: 32-true
 log_every_n_steps: 10
+fast_dev_run: false
+limit_train_batches: null
+limit_val_batches: null

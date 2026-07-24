@@ -58,7 +58,6 @@ Choose which experiment tracking and data management tools to include:
 | Weights & Biases | Cloud experiment tracking with rich media |
 | MLflow | Self-hosted experiment tracking + model registry |
 | TensorBoard | Local training visualization |
-| DVC | Data and model version control |
 
 ## Step 6: Project Generation
 
@@ -67,7 +66,7 @@ Claude generates the complete project structure:
 ```
 face-detection-system/
 ├── .github/workflows/
-│   ├── code-review.yml
+│   ├── ci.yml
 │   └── test.yml
 ├── .gitignore
 ├── .pre-commit-config.yaml
@@ -130,7 +129,7 @@ Claude:
 You: "Now implement a RetinaFace detector"
 
 Claude:
-1. Reads expert-coder, pytorch-lightning, pydantic-strict skills
+1. Reads expert-coder, pytorch-lightning, pydantic skills
 2. Creates ModelConfig with Pydantic
 3. Implements RetinaFaceModule(pl.LightningModule)
 4. Wraps backbone loading in abstraction
@@ -148,6 +147,5 @@ The Master Skill orchestrates these skills during generation:
 5. **testing** -- sets up pytest configuration
 6. **pytorch-lightning** -- adds Lightning patterns (if training archetype)
 7. **wandb/mlflow/tensorboard** -- adds tracking integration (if selected)
-8. **dvc** -- initializes DVC (if selected)
 
 Each skill contributes its specific configuration and code patterns to the generated project.

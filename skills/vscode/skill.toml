@@ -2,6 +2,7 @@
 name = "vscode"
 version = "1.0.0"
 category = "infra"
+tier = "extra"
 tags = ["editor", "ide", "vscode", "configuration"]
 
 [dependencies]

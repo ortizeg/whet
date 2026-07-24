@@ -9,29 +9,28 @@ This archetype packages trained models into production-ready REST API services. 
 ## Directory Structure
 
 ```
-{{project_slug}}/
-├── src/{{package_name}}/
-│   ├── __init__.py
-│   ├── serve.py               # FastAPI application
-│   ├── inference/
-│   │   ├── __init__.py
-│   │   ├── predictor.py       # ONNX Runtime wrapper
-│   │   └── preprocessing.py   # Input transforms
-│   ├── schemas/
-│   │   ├── __init__.py
-│   │   ├── request.py         # Pydantic request models
-│   │   └── response.py        # Pydantic response models
-│   └── utils/
-│       └── health.py          # Health check endpoints
-├── models/                    # ONNX model files
+${project_slug}/
+├── models/
 │   └── .gitkeep
-├── Dockerfile                 # Multi-stage (slim inference)
-├── docker-compose.yml         # GPU support + monitoring
+├── src/
+│   └── ${package_name}/
+│       ├── inference/
+│       │   ├── __init__.py
+│       │   └── engine.py
+│       ├── __init__.py
+│       ├── app.py
+│       ├── config.py
+│       ├── py.typed
+│       └── schemas.py
 ├── tests/
-│   ├── test_api.py
-│   ├── test_predictor.py
-│   └── test_preprocessing.py
-└── ...
+│   ├── __init__.py
+│   └── test_app.py
+├── .env.example
+├── .gitignore
+├── Dockerfile
+├── README.md
+├── pixi.toml
+└── pyproject.toml
 ```
 
 ## API Endpoints
@@ -47,7 +46,7 @@ This archetype packages trained models into production-ready REST API services. 
 
 ```bash
 # Run locally
-uv run uvicorn my_project.serve:app --reload
+uvicorn my_project.serve:app --reload
 
 # Build and run with Docker
 docker compose up inference

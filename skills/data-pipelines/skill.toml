@@ -1,0 +1,13 @@
+[skill]
+name = "data-pipelines"
+version = "1.0.0"
+category = "cv-ml"
+tags = ["data", "etl", "dataset", "splitting", "storage", "data-quality"]
+
+[dependencies]
+requires = []
+recommends = ["pydantic", "model-evaluation"]
+
+[compatibility]
+python = ">=3.11"
+libraries = {}

@@ -5,7 +5,7 @@ category = "cv-ml"
 tags = ["training", "deep-learning", "pytorch", "lightning"]
 
 [dependencies]
-requires = ["pydantic-strict", "loguru"]
+requires = ["pydantic", "loguru"]
 recommends = ["hydra-config", "wandb"]
 
 [compatibility]

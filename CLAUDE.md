@@ -13,8 +13,7 @@ Distribution: `uvx whet` (one-shot) / `uv tool install whet` (permanent)
 
 ### What whet provides
 
-- **30 Skills** — Best-practice knowledge modules (PyTorch Lightning, Pydantic, Docker, FastAPI, Hugging Face, AWS SageMaker, Gradio, Kubernetes, etc.)
-- **6 Agents** — Pre-configured behavioral profiles (Expert Coder, ML Engineer, DevOps/Infra, Data Engineer, Code Review, Test Engineer)
+- **32 Skills** — Best-practice knowledge modules (PyTorch Lightning, Pydantic, Docker, FastAPI, Hugging Face, AWS SageMaker, Gradio, Kubernetes, Model Evaluation, etc.)
 - **6+ Archetypes** — Complete project templates for common CV/ML project types
 - **CLI** — `whet add`, `whet install`, `whet list`, `whet search`, `whet doctor`
 - **Multi-platform** — Claude Code, Google Antigravity, Cursor, GitHub Copilot
@@ -29,14 +28,13 @@ whet/
 │   ├── core/              # Domain models (Pydantic: skill, config)
 │   └── registry/          # Skill discovery, search, dependency resolution
 ├── skills/                # 25+ skill definitions (SKILL.md + README.md + skill.toml)
-├── agents/                # 4+ agent definitions (SKILL.md + README.md + agent.toml)
 ├── archetypes/            # 6+ project templates (README.md + archetype.toml + template/)
 ├── settings/              # Pre-built settings templates (claude.json, etc.)
 ├── docs/                  # MkDocs Material documentation
 ├── tests/                 # Self-tests (dynamic discovery, no hardcoded counts)
 ├── .github/workflows/     # CI/CD (test, lint, docs) — uses uv
 ├── pyproject.toml         # uv-managed, publishable to PyPI
-├── justfile               # Task runner (replaces pixi tasks)
+├── justfile               # Task runner (wraps uv commands)
 └── mkdocs.yml             # Documentation site config
 ```
 
@@ -63,22 +61,99 @@ uv run mypy src/whet/ tests/ --strict
 
 ## How to Add a New Skill
 
-1. Create `skills/<name>/SKILL.md` — Must start with YAML frontmatter (`name`, `description`), be >500 chars, include code examples and headers
-2. Create `skills/<name>/skill.toml` — Machine-readable metadata (category, tags, deps, compatibility)
+1. Create `skills/<name>/SKILL.md` — YAML frontmatter (`name`, `description`), >500 chars, code examples and headers
+2. Create `skills/<name>/skill.toml` — Machine-readable metadata (category, tier, tags, deps, compatibility)
 3. Create `skills/<name>/README.md` — Must explain purpose (include words like "when", "use", "purpose")
 4. Create `docs/skills/<name>.md` — Documentation page (Purpose, When to Use, Key Patterns, Anti-Patterns)
 5. Add nav entry to `mkdocs.yml` under Skills section
 
 Tests discover skills dynamically — no hardcoded lists to update.
 
-## How to Add a New Agent
+### Writing the `description` (this is the trigger)
 
-1. Create `agents/<name>/SKILL.md` — Must be >500 chars
-2. Create `agents/<name>/agent.toml` — Agent metadata (type: advisory/blocking, tags)
-3. Create `agents/<name>/README.md` — Agent overview
-4. If blocking agent: create `agents/<name>/action.yml`
-5. Create `docs/agents/<name>.md` — Documentation page
-6. Add nav entry to `mkdocs.yml` under Agents section
+Only the frontmatter is preloaded; the `description` is the entire discovery mechanism.
+Write it third-person and trigger-first, and be a little "pushy":
+
+```
+description: >
+  Use this skill when <concrete situations>. Reach for it any time you would otherwise
+  <the manual thing>, even if the user doesn't say "<tool>" explicitly. Not for
+  <adjacent thing> (see <other-skill>).
+```
+
+Always disambiguate against adjacent skills so two skills never compete for the same trigger.
+
+### Progressive disclosure (keep SKILL.md thin)
+
+A SKILL.md loads fully into context when triggered and **stays there for the session**, so
+every line is a recurring token cost. Structure a skill as an index plus on-demand detail:
+
+```
+skills/<name>/
+├── SKILL.md          # ~120-200 line index: core patterns, conventions, anti-patterns
+└── references/       # topic files, loaded only when needed
+    ├── <topic-a>.md
+    └── <topic-b>.md
+```
+
+Rules:
+- Keep `SKILL.md` **under 500 lines** (target 120–200 for a split skill).
+- Keep the 80%-case patterns, conventions, and anti-patterns **inline**; move depth to `references/`.
+- End `SKILL.md` with a `## Deep dives` list giving each reference a *"read this when…"* trigger.
+- **One level deep only** — a reference file must never link to another reference file.
+- Reference files over 100 lines start with a table of contents; name them descriptively.
+
+The installer copies `references/` for directory-based platforms (Claude, Antigravity) and
+inlines them for flat-file platforms (Cursor, Copilot), so no content is lost either way.
+
+### Scaffolding a project (`whet init`)
+
+`whet init <archetype>` renders the template **and installs the archetype's required
+skills** into the new project, so it is usable immediately:
+
+```bash
+whet init pytorch-training-project
+whet init pytorch-training-project --with-recommended   # + recommended skills
+whet init pytorch-training-project --no-skills          # scaffold files only
+```
+
+An archetype's value over a plain folder copy is the skill set it composes, so leaving
+that as a printed hint made the `[skills]` list advisory. A name in `archetype.toml` that
+no longer resolves is reported rather than silently skipped.
+
+### Keeping an install in sync (`--prune`)
+
+`whet install` copies skills but does not remove ones that were deleted upstream, so a
+stale skill can linger in `.claude/skills/` long after it left the repo. `--prune` fixes
+that:
+
+```bash
+whet install --prune
+```
+
+Prune is **manifest-scoped**. Each install writes `.whet-manifest.json` into the target
+directory recording which skills whet owns there. Prune only ever removes names from that
+manifest, so skills installed by other tools (GSD, `interface-design`, hand-written ones)
+that share the same directory are never touched. A skill merely filtered out of a run
+(`--category`, or an `extra` skill without `--include-extras`) is not an orphan either —
+only skills that no longer exist in `skills/` are removed.
+
+Installs predating the manifest are invisible to prune; clear those once with
+`whet remove <name>`.
+
+### Core vs extra tier
+
+`tier = "core"` (default) installs with `whet install`. `tier = "extra"` marks a skill as
+opt-in — it is skipped unless the user passes `--include-extras`. Use `extra` for skills
+that are real but outside the flagship path, so they don't dilute the default trigger surface.
+
+## Companion skills (not shipped by whet)
+
+whet does not ship a general product-UI ruleset — `gradio` covers ML demos only. For
+application/dashboard UI work, use the external **`interface-design`** skill alongside whet
+(upstream: https://github.com/Dammyjay93/interface-design). Its `SKILL.md` is self-contained;
+`references/` only holds design-system templates. It also provides `/design-review` and
+`/design-deslop`.
 
 ## How to Add a New Archetype
 
@@ -109,7 +184,8 @@ description: >
 [skill]
 name = "skill-name"
 version = "1.0.0"
-category = "cv-ml"  # core | cv-ml | infra | experiment-tracking
+category = "cv-ml"  # core | cv-ml | infra | cloud | experiment-tracking
+tier = "core"       # core (default, installed) | extra (opt-in via --include-extras)
 tags = ["tag1", "tag2"]
 
 [dependencies]

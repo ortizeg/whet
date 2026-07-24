@@ -6,5 +6,5 @@ tags = ["models", "pretrained", "collection", "benchmarks"]
 description = "Collection of pretrained models with benchmarking and evaluation"
 
 [skills]
-required = ["pytorch-lightning", "onnx", "pydantic-strict", "loguru", "testing"]
-recommended = ["dvc", "wandb", "docker-cv"]
+required = ["pydantic", "loguru", "testing", "code-quality", "pixi"]
+recommended = ["pytorch-lightning", "onnx", "tensorrt", "wandb", "model-evaluation", "docker-cv"]

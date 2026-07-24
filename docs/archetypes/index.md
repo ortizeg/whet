@@ -10,7 +10,7 @@ Archetypes are project templates for common AI/CV workflows. Each archetype prov
 | [CV Inference Service](cv-inference-service.md) | Production model serving | FastAPI, ONNX Runtime, Docker |
 | [Research Notebook](research-notebook.md) | Jupyter experimentation | Jupyter, matplotlib, Lightning |
 | [Library Package](library-package.md) | Reusable Python packages | PyPI, docs, semver |
-| [Data Pipeline](data-processing-pipeline.md) | Dataset ETL workflows | DVC, parallel processing |
+| [Data Pipeline](data-processing-pipeline.md) | Dataset ETL workflows | Pydantic, parallel processing |
 | [Model Zoo](model-zoo.md) | Pretrained model collections | Model cards, benchmarks |
 
 ## Common Base Structure
@@ -20,8 +20,8 @@ All archetypes share this foundation:
 ```
 {{project_slug}}/
 ├── .github/workflows/
-│   ├── code-review.yml        # Code Review Agent (blocking)
-│   └── test.yml               # Test Engineer Agent (blocking)
+│   ├── ci.yml                 # Lint, type check
+│   └── test.yml               # Test suite
 ├── .gitignore
 ├── .pre-commit-config.yaml
 ├── pixi.toml                  # Environment + tasks

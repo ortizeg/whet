@@ -16,7 +16,7 @@ console = Console()
 
 
 def _get_config() -> WhetConfig:
-    return WhetConfig()
+    return WhetConfig.load()
 
 
 def _get_adapter(platform: Platform):  # type: ignore[no-untyped-def]

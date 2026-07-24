@@ -1,25 +1,35 @@
 ---
 name: vscode
 description: >
-  Configure VS Code for productive computer vision and ML development. Covers
-  workspace settings, Ruff and MyPy integration, Python debugging configurations,
-  remote SSH GPU server setup, and recommended extensions.
+  Use this skill when configuring VS Code for CV/ML development — workspace settings.json,
+  Ruff and MyPy editor integration, Python debug launch configs, tasks, remote-SSH to GPU
+  servers, dev containers, and recommended extensions. Reach for it any time you'd
+  otherwise hand-edit .vscode files or set up a remote GPU dev environment, even if the
+  user just says "set up my editor" or "debug this in VS Code". This is editor setup; the
+  lint/type standards live in code-quality and commit hooks in pre-commit.
 ---
 
 # VS Code Skill
 
-Configure VS Code for productive computer vision and machine learning development with integrated linting, debugging, and remote GPU server support.
+Configure VS Code for productive computer vision and machine learning development with
+integrated linting, debugging, and remote GPU server support. This page holds the core
+workspace settings you need almost every time; the deep dives below cover launch configs,
+tasks, remote SSH, dev containers, and the extension list.
 
-## Workspace Settings
+**Scope boundary:** this is editor setup. The Ruff/MyPy rule sets themselves live in the
+`code-quality` skill, and commit-time enforcement lives in `pre-commit`.
 
-### .vscode/settings.json
+## The settings core
+
+Point VS Code at the pixi interpreter, make Ruff the formatter, run MyPy strict, and hide
+the big ML directories from search. This is the 80% of `.vscode/settings.json`:
 
 ```jsonc
 {
-    // Python
+    // Python — use the pixi-managed interpreter
     "python.defaultInterpreterPath": "${workspaceFolder}/.pixi/envs/default/bin/python",
     "python.analysis.typeCheckingMode": "strict",
-    "python.analysis.autoImportCompletions": true,
+    "python.analysis.diagnosticMode": "workspace",
 
     // Ruff (replaces black, isort, flake8)
     "editor.formatOnSave": true,
@@ -39,35 +49,13 @@ Configure VS Code for productive computer vision and machine learning developmen
         "--strict",
         "--config-file=${workspaceFolder}/pyproject.toml"
     ],
-    "python.analysis.diagnosticMode": "workspace",
 
     // Testing
     "python.testing.pytestEnabled": true,
-    "python.testing.pytestArgs": [
-        "tests",
-        "-v",
-        "--tb=short"
-    ],
+    "python.testing.pytestArgs": ["tests", "-v", "--tb=short"],
     "python.testing.unittestEnabled": false,
 
-    // File associations
-    "files.associations": {
-        "*.yaml": "yaml",
-        "*.yml": "yaml",
-        "Dockerfile*": "dockerfile",
-        "*.toml": "toml"
-    },
-
-    // Exclude large directories from explorer and search
-    "files.exclude": {
-        "**/__pycache__": true,
-        "**/.mypy_cache": true,
-        "**/.ruff_cache": true,
-        "**/.pytest_cache": true,
-        "**/htmlcov": true,
-        "**/site": true,
-        "**/*.egg-info": true
-    },
+    // Keep ML output directories out of search
     "search.exclude": {
         "**/data": true,
         "**/checkpoints": true,
@@ -80,340 +68,21 @@ Configure VS Code for productive computer vision and machine learning developmen
 
     // Editor
     "editor.rulers": [100],
-    "editor.tabSize": 4,
-    "editor.insertSpaces": true,
     "files.trimTrailingWhitespace": true,
-    "files.insertFinalNewline": true,
-
-    // Terminal
-    "terminal.integrated.defaultProfile.linux": "bash",
-    "terminal.integrated.env.linux": {
-        "PATH": "${workspaceFolder}/.pixi/envs/default/bin:${env:PATH}"
-    },
-
-    // Jupyter
-    "jupyter.notebookFileRoot": "${workspaceFolder}",
-    "notebook.formatOnSave.enabled": true,
-    "notebook.codeActionsOnSave": {
-        "source.fixAll.ruff": "explicit"
-    }
+    "files.insertFinalNewline": true
 }
 ```
 
-## Recommended Extensions
+The full settings file — file associations, `files.exclude`, terminal PATH, and Jupyter
+notebook formatting — is in `references/workspace-settings.md`.
 
-### .vscode/extensions.json
+## Workspace vs user settings
 
-```json
-{
-    "recommendations": [
-        "ms-python.python",
-        "ms-python.vscode-pylance",
-        "charliermarsh.ruff",
-        "ms-python.mypy-type-checker",
-        "ms-toolsai.jupyter",
-        "ms-toolsai.jupyter-renderers",
-        "ms-azuretools.vscode-docker",
-        "ms-vscode-remote.remote-ssh",
-        "ms-vscode-remote.remote-containers",
-        "eamodio.gitlens",
-        "tamasfe.even-better-toml",
-        "redhat.vscode-yaml",
-        "GitHub.copilot",
-        "ms-python.debugpy"
-    ]
-}
-```
+Workspace settings (interpreter path, Ruff config, exclusions) go in `.vscode/` and are
+committed to git. User preferences (theme, font size, keybindings) stay in
+`~/.config/Code/User/` and are never committed.
 
-### Extension Descriptions
-
-| Extension | Purpose |
-|-----------|---------|
-| `ms-python.python` | Core Python support |
-| `ms-python.vscode-pylance` | Fast type checking and IntelliSense |
-| `charliermarsh.ruff` | Ruff linting and formatting |
-| `ms-python.mypy-type-checker` | Mypy integration |
-| `ms-toolsai.jupyter` | Notebook support |
-| `ms-azuretools.vscode-docker` | Dockerfile editing and container management |
-| `ms-vscode-remote.remote-ssh` | Remote development on GPU servers |
-| `ms-vscode-remote.remote-containers` | Dev Containers |
-| `eamodio.gitlens` | Git history and blame |
-| `tamasfe.even-better-toml` | TOML syntax for pixi.toml and pyproject.toml |
-
-## Debug Configurations
-
-### .vscode/launch.json
-
-```jsonc
-{
-    "version": "0.2.0",
-    "configurations": [
-        // =====================================================================
-        // Training — debug a Lightning training run
-        // =====================================================================
-        {
-            "name": "Train: Debug",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "my_project.train",
-            "args": [
-                "trainer.max_epochs=2",
-                "trainer.fast_dev_run=true",
-                "data.batch_size=4"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "CUDA_VISIBLE_DEVICES": "0",
-                "PYTHONPATH": "${workspaceFolder}/src"
-            },
-            "justMyCode": false,
-            "console": "integratedTerminal"
-        },
-
-        // =====================================================================
-        // Tests — debug pytest with current file or specific test
-        // =====================================================================
-        {
-            "name": "Test: Current File",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "pytest",
-            "args": [
-                "${file}",
-                "-v",
-                "--tb=short",
-                "--no-header"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/src"
-            },
-            "justMyCode": false,
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Test: All",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "pytest",
-            "args": [
-                "tests/",
-                "-v",
-                "--tb=short"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/src"
-            },
-            "justMyCode": false,
-            "console": "integratedTerminal"
-        },
-
-        // =====================================================================
-        // Inference — debug FastAPI serving endpoint
-        // =====================================================================
-        {
-            "name": "Serve: FastAPI",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "uvicorn",
-            "args": [
-                "my_project.serve:app",
-                "--host", "0.0.0.0",
-                "--port", "8000",
-                "--reload"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/src",
-                "MODEL_PATH": "${workspaceFolder}/models/best.onnx"
-            },
-            "justMyCode": false,
-            "console": "integratedTerminal"
-        },
-
-        // =====================================================================
-        // Script — debug any Python script
-        // =====================================================================
-        {
-            "name": "Script: Current File",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/src"
-            },
-            "justMyCode": false,
-            "console": "integratedTerminal"
-        }
-    ]
-}
-```
-
-## Task Definitions
-
-### .vscode/tasks.json
-
-```jsonc
-{
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "Lint",
-            "type": "shell",
-            "command": "pixi run lint",
-            "group": "test",
-            "problemMatcher": ["$eslint-stylish"],
-            "presentation": {
-                "echo": true,
-                "reveal": "always"
-            }
-        },
-        {
-            "label": "Format",
-            "type": "shell",
-            "command": "pixi run format",
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always"
-            }
-        },
-        {
-            "label": "Type Check",
-            "type": "shell",
-            "command": "pixi run typecheck",
-            "group": "test",
-            "problemMatcher": ["$tsc"],
-            "presentation": {
-                "echo": true,
-                "reveal": "always"
-            }
-        },
-        {
-            "label": "Test",
-            "type": "shell",
-            "command": "pixi run test",
-            "group": {
-                "kind": "test",
-                "isDefault": true
-            },
-            "presentation": {
-                "echo": true,
-                "reveal": "always"
-            }
-        },
-        {
-            "label": "Train",
-            "type": "shell",
-            "command": "pixi run python -m my_project.train",
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always"
-            }
-        }
-    ]
-}
-```
-
-## Python Interpreter with Pixi
-
-Configure VS Code to use the pixi-managed Python:
-
-```jsonc
-{
-    // Auto-detect pixi environment
-    "python.defaultInterpreterPath": "${workspaceFolder}/.pixi/envs/default/bin/python",
-
-    // Alternative: use pixi run prefix for terminal commands
-    "terminal.integrated.env.linux": {
-        "PATH": "${workspaceFolder}/.pixi/envs/default/bin:${env:PATH}"
-    },
-    "terminal.integrated.env.osx": {
-        "PATH": "${workspaceFolder}/.pixi/envs/default/bin:${env:PATH}"
-    }
-}
-```
-
-## Remote Development
-
-### SSH to GPU Server
-
-```jsonc
-// .vscode/settings.json (for remote SSH)
-{
-    "remote.SSH.defaultExtensions": [
-        "ms-python.python",
-        "ms-python.vscode-pylance",
-        "charliermarsh.ruff",
-        "ms-python.mypy-type-checker",
-        "ms-toolsai.jupyter"
-    ],
-    "remote.SSH.configFile": "~/.ssh/config"
-}
-```
-
-SSH config example:
-
-```
-# ~/.ssh/config
-Host gpu-server
-    HostName 192.168.1.100
-    User researcher
-    IdentityFile ~/.ssh/id_ed25519
-    ForwardAgent yes
-    LocalForward 6006 localhost:6006    # TensorBoard
-    LocalForward 8000 localhost:8000    # Inference API
-    LocalForward 5000 localhost:5000    # MLflow UI
-```
-
-### Dev Containers
-
-```jsonc
-// .devcontainer/devcontainer.json
-{
-    "name": "ML Dev Container",
-    "build": {
-        "dockerfile": "../Dockerfile",
-        "target": "training"
-    },
-    "runArgs": [
-        "--gpus", "all",
-        "--shm-size", "8g"
-    ],
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "ms-python.python",
-                "charliermarsh.ruff",
-                "ms-toolsai.jupyter"
-            ],
-            "settings": {
-                "python.defaultInterpreterPath": "/app/.pixi/envs/default/bin/python"
-            }
-        }
-    },
-    "forwardPorts": [6006, 8000],
-    "postCreateCommand": "pixi install"
-}
-```
-
-## Workspace vs User Settings
-
-| Setting | Scope | Location |
-|---------|-------|----------|
-| Python interpreter path | Workspace | `.vscode/settings.json` |
-| Ruff configuration | Workspace | `.vscode/settings.json` |
-| File exclusions | Workspace | `.vscode/settings.json` |
-| Theme, font size | User | `~/.config/Code/User/settings.json` |
-| Keybindings | User | `~/.config/Code/User/keybindings.json` |
-| Extension sync | User | VS Code settings sync |
-
-**Rule:** Workspace settings go in `.vscode/` and are committed to git. User preferences stay in your user settings and are never committed.
-
-## Best Practices
+## Conventions
 
 1. **Commit `.vscode/`** -- share workspace settings, launch configs, and extension recommendations
 2. **Don't commit user settings** -- themes, fonts, and personal keybindings stay user-level
@@ -425,3 +94,21 @@ Host gpu-server
 8. **Configure remote SSH** -- port-forward TensorBoard and MLflow for remote GPU development
 9. **Use Dev Containers** -- consistent GPU environment across team members
 10. **Set rulers at line length** -- visual guide matching Ruff's `line-length = 100`
+
+## Anti-patterns
+
+- **A global system interpreter** — pointing `python.defaultInterpreterPath` at `/usr/bin/python` silently diverges the editor from the pixi environment CI uses.
+- **Committing user settings** — themes, fonts, and keybindings in `.vscode/settings.json` fight every teammate's preferences.
+- **Leaving `data/` and `checkpoints/` searchable** — a workspace search over a dataset directory hangs the editor.
+- **Mixing formatters** — black or autopep8 alongside Ruff produces churn on every save; Ruff is the single formatter.
+- **`"justMyCode": true` in ML debug configs** — you cannot step into Lightning, torch, or FastAPI, which is where the bug usually is.
+- **Missing `PYTHONPATH` for src-layout** — debug launches fail to import the package unless `${workspaceFolder}/src` is on the path.
+- **A dev container without `--shm-size`** — DataLoader workers die on Docker's 64 MB default shared memory.
+
+## Deep dives
+
+- `references/workspace-settings.md` — read when writing the complete `.vscode/settings.json`, wiring the pixi interpreter into the terminal, defining `tasks.json`, or deciding what belongs in workspace vs user scope.
+- `references/debug-configs.md` — read when setting up `launch.json` to debug a training run, pytest, or a FastAPI serving endpoint.
+- `references/remote-ssh-gpu.md` — read when developing over Remote-SSH on a GPU server or port-forwarding TensorBoard/MLflow.
+- `references/devcontainers.md` — read when building a GPU-enabled dev container from the project Dockerfile.
+- `references/extensions.md` — read when writing `.vscode/extensions.json` or deciding which extensions the project should recommend.

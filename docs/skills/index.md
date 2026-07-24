@@ -13,6 +13,36 @@ Each skill lives in its own directory under `skills/` and contains:
 
 When you reference a skill in a Claude Code session, Claude reads the `SKILL.md` and uses its contents to guide code generation. The skill does not execute code -- it provides expert context that shapes Claude's output.
 
+## Install Tiers
+
+Skills are either **core** (installed by `whet install`) or **extra** (opt-in). Extras are
+marked _(extra)_ below — they are real skills, but outside the flagship CV/ML path, so they
+stay out of the default trigger surface. Install them with:
+
+```bash
+whet install --include-extras
+```
+
+## Keeping an Install in Sync
+
+`whet install` copies skills but does not remove ones deleted upstream. Use `--prune` to
+clear them out:
+
+```bash
+whet install --prune
+```
+
+Prune only removes skills recorded in the target directory's `.whet-manifest.json` — the
+record of what whet installed there. Skills placed in the same directory by other tools
+are never touched.
+
+## Companion Skills
+
+whet does not ship a general product-UI ruleset — `gradio` covers ML demos only. For
+application or dashboard UI work, pair whet with the external **`interface-design`** skill.
+Note that if its `references/` directory is missing from your install, its "Deep dives"
+links will not resolve.
+
 ## Skill Categories
 
 ### Core Framework
@@ -22,7 +52,7 @@ These skills define the foundational patterns for all projects.
 | Skill | Description | Key Libraries |
 |-------|-------------|---------------|
 | [Master Skill](master-skill.md) | Universal coding conventions for all CV/ML code | Python, typing |
-| [Pydantic Strict](pydantic-strict.md) | Strict data validation and configuration models | Pydantic v2 |
+| [Pydantic](pydantic.md) | Strict data validation and configuration models | Pydantic v2 |
 | [Code Quality](code-quality.md) | Linting, formatting, and type checking setup | ruff, mypy |
 | [Loguru](loguru.md) | Structured logging for all projects (mandatory convention) | loguru |
 | [Abstraction Patterns](abstraction-patterns.md) | Design patterns for ML codebases | ABC, Protocol |
@@ -36,7 +66,7 @@ Skills for building and training deep learning models.
 | [PyTorch Lightning](pytorch-lightning.md) | Training loops, modules, and callbacks | Lightning 2.x |
 | [Hydra Config](hydra-config.md) | Hierarchical configuration management | Hydra, OmegaConf |
 | [Weights & Biases](wandb.md) | Experiment tracking and visualization | wandb |
-| [MLflow](mlflow.md) | ML lifecycle and model registry | MLflow |
+| [MLflow](mlflow.md) _(extra)_ | ML lifecycle and model registry | MLflow |
 | [TensorBoard](tensorboard.md) | Training visualization and profiling | TensorBoard |
 
 ### Computer Vision
@@ -49,16 +79,18 @@ Skills specific to computer vision workflows.
 | [Matplotlib](matplotlib.md) | Visualization and plotting for CV results | matplotlib |
 | [ONNX](onnx.md) | Model export and optimization | onnx, onnxruntime, onnxslim |
 | [TensorRT](tensorrt.md) | GPU-optimized inference engine building | TensorRT, trtexec |
-| [Hugging Face](huggingface.md) | Pretrained models, fine-tuning, PEFT/LoRA | transformers, datasets, peft |
+| [Model Evaluation](model-evaluation.md) | Metrics, mAP/IoU, eval sets, failure analysis | supervision, torchmetrics |
+| [PydanticAI](pydantic-ai.md) | Type-safe LLM/VLM structured outputs, auto-labeling | pydantic-ai |
+| [Hugging Face](huggingface.md) _(extra)_ | Pretrained models, fine-tuning, PEFT/LoRA | transformers, datasets, peft |
 
 ### Cloud & Deployment
 
 | Skill | Description | Key Libraries |
 |-------|-------------|---------------|
-| [AWS SageMaker](aws-sagemaker.md) | ML training and deployment on AWS | sagemaker, boto3 |
+| [AWS SageMaker](aws-sagemaker.md) _(extra)_ | ML training and deployment on AWS | sagemaker, boto3 |
 | [FastAPI](fastapi.md) | ML model serving APIs | FastAPI, uvicorn |
-| [Kubernetes](kubernetes.md) | ML service deployment and orchestration on K8s | kubectl, helm |
-| [Gradio](gradio.md) | Interactive ML model demos and prototypes | Gradio |
+| [Kubernetes](kubernetes.md) _(extra)_ | ML service deployment and orchestration on K8s | kubectl, helm |
+| [Gradio](gradio.md) _(extra)_ | Interactive ML model demos and prototypes | Gradio |
 
 ### Infrastructure & DevOps
 
@@ -71,10 +103,10 @@ Skills for packaging, deploying, and maintaining projects.
 | [PyPI](pypi.md) | Python package publishing | build, twine |
 | [GCP](gcp.md) | Google Cloud Platform services for ML workflows | gcloud, google-cloud-storage, google-cloud-aiplatform |
 | [GitHub Actions](github-actions.md) | CI/CD pipeline configuration | GitHub Actions |
-| [GitHub Repo Setup](github-repo-setup.md) | Repository initialization and configuration | gh CLI |
+| [GitHub Repo Setup](github-repo-setup.md) _(extra)_ | Repository initialization and configuration | gh CLI |
 | [Pre-commit](pre-commit.md) | Git hook automation | pre-commit |
-| [VS Code](vscode.md) | Editor configuration for ML development | VS Code |
-| [DVC](dvc.md) | Data and model version control | DVC |
+| [VS Code](vscode.md) _(extra)_ | Editor configuration for ML development | VS Code |
+| [Data Pipelines](data-pipelines.md) | ETL, storage formats, leakage-free splitting, schema evolution | polars, Great Expectations |
 
 ### Process & Review
 
@@ -91,11 +123,11 @@ Skills for code review and architectural decisions.
 
 | Phase | Recommended Skills |
 |-------|-------------------|
-| **Starting a new project** | Master Skill, Code Quality, Pixi, Pydantic Strict |
+| **Starting a new project** | Master Skill, Code Quality, Pixi, Pydantic |
 | **Building models** | PyTorch Lightning, Hydra Config |
 | **Training & experiments** | W&B or MLflow, TensorBoard |
 | **Preparing for production** | Docker CV, ONNX, Testing, Pre-commit |
-| **Publishing & sharing** | PyPI, GitHub Actions, DVC |
+| **Publishing & sharing** | PyPI, GitHub Actions |
 
 ### By Role
 
@@ -104,7 +136,7 @@ Skills for code review and architectural decisions.
 | **Researcher** | PyTorch Lightning, Hydra Config, Matplotlib, TensorBoard |
 | **ML Engineer** | All Core + Training + Infrastructure |
 | **CV Engineer** | OpenCV, PyTorch Lightning, ONNX, Docker CV |
-| **DevOps/MLOps** | Docker CV, GitHub Actions, DVC, Pixi |
+| **DevOps/MLOps** | Docker CV, GitHub Actions, Pixi |
 
 ## Combining Skills
 

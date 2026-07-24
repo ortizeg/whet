@@ -120,7 +120,7 @@ class FocalLoss(DetectionLoss):
 
 - **PyTorch Lightning** -- Abstract model interfaces for interchangeable LightningModules
 - **Hydra Config** -- Registry-based component instantiation from config
-- **Pydantic Strict** -- Validated configuration for registered components
+- **Pydantic** -- Validated configuration for registered components
 - **Testing** -- Test abstract interfaces with concrete test doubles
 
 ## Full Reference

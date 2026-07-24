@@ -8,6 +8,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from whet.core.paths import bundled_dir
+
 
 class SettingsTemplate(BaseModel, frozen=True):
     """A settings template with permissions."""
@@ -103,7 +105,7 @@ def write_settings(settings_path: Path, template: SettingsTemplate) -> None:
 
 def get_template_path(platform: str) -> Path:
     """Get the path to a platform's settings template."""
-    templates_dir = Path(__file__).resolve().parents[3] / "settings"
+    templates_dir = bundled_dir("settings")
     template_file = templates_dir / f"{platform}.json"
     if template_file.exists():
         return template_file

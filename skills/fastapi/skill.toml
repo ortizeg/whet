@@ -5,7 +5,7 @@ category = "infra"
 tags = ["api", "serving", "fastapi", "rest", "async"]
 
 [dependencies]
-requires = ["pydantic-strict", "loguru"]
+requires = ["pydantic", "loguru"]
 recommends = ["docker-cv", "onnx", "testing"]
 
 [compatibility]

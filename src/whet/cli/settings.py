@@ -35,7 +35,7 @@ def generate(
     ),
 ) -> None:
     """Generate optimized settings for a platform."""
-    cfg = WhetConfig()
+    cfg = WhetConfig.load()
     plat = platform or cfg.target.value
 
     try:
@@ -73,7 +73,7 @@ def diff(
     scope: str = typer.Option("local", "--scope", "-s", help="Scope: local or global."),
 ) -> None:
     """Preview changes between current settings and template."""
-    cfg = WhetConfig()
+    cfg = WhetConfig.load()
     plat = platform or cfg.target.value
 
     template_path = get_template_path(plat)
@@ -129,7 +129,7 @@ def apply(
     if not scope_global and not scope_local:
         scope_local = True
 
-    cfg = WhetConfig()
+    cfg = WhetConfig.load()
     plat = platform or cfg.target.value
 
     template_path = get_template_path(plat)
