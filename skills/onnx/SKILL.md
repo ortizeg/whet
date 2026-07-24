@@ -500,4 +500,4 @@ To compute the ONNX speedup, run the same warmup/timed loop against the PyTorch 
 7. **Consider quantization** for CPU deployment (2-4x speedup).
 8. **Profile with ONNX Runtime** profiling tools to find bottlenecks.
 9. **Wrap ONNX inference** in a Pydantic-validated class for type safety.
-10. **Store ONNX models** as DVC-tracked artifacts, not in Git.
+10. **Store ONNX models** in object storage or an artifact registry, not in Git.

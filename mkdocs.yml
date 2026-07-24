@@ -80,7 +80,7 @@ nav:
     - Weights & Biases: skills/wandb.md
     - MLflow: skills/mlflow.md
     - TensorBoard: skills/tensorboard.md
-    - DVC: skills/dvc.md
+    - Data Pipelines: skills/data-pipelines.md
     - ONNX: skills/onnx.md
     - TensorRT: skills/tensorrt.md
     - Abstraction Patterns: skills/abstraction-patterns.md
@@ -91,14 +91,6 @@ nav:
     - PydanticAI: skills/pydantic-ai.md
     - Gradio: skills/gradio.md
     - Kubernetes: skills/kubernetes.md
-  - Agents:
-    - Overview: agents/index.md
-    - Expert Coder: agents/expert-coder.md
-    - ML Engineer: agents/ml-engineer.md
-    - Code Review: agents/code-review.md
-    - Test Engineer: agents/test-engineer.md
-    - DevOps/Infra: agents/devops-infra.md
-    - Data Engineer: agents/data-engineer.md
   - Archetypes:
     - Overview: archetypes/index.md
     - PyTorch Training: archetypes/pytorch-training-project.md

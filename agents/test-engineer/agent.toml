@@ -1,8 +1,0 @@
-[agent]
-name = "test-engineer"
-version = "1.0.0"
-type = "blocking"
-tags = ["testing", "coverage", "ci-cd", "enforcement"]
-
-[ci]
-has_action = true

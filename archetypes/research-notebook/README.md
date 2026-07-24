@@ -203,7 +203,7 @@ When an experiment proves successful and needs to scale, use the PyTorch Trainin
 
 ### Managing Large Data
 
-For datasets too large for the repository, use DVC (Data Version Control) to track data files in remote storage while keeping lightweight pointer files in git. Add DVC configuration to the project and update `scripts/setup_data.py` to pull data via `dvc pull`.
+For datasets too large for the repository, keep the data in object storage and commit only a lightweight, versioned manifest that records each file's path and content hash. Update `scripts/setup_data.py` to read that manifest and fetch the referenced files into `data/`.
 
 ### Custom Plotting Styles
 

@@ -469,4 +469,4 @@ def load_quantized_model(
 
 ## Integration with Other Skills
 
-Wrap HF models in a Lightning Trainer for custom loops; set `report_to=["wandb"]` for tracking; export via `optimum`/ONNX for inference; deploy on SageMaker (HF DLC) or behind FastAPI; version Hub datasets with DVC.
+Wrap HF models in a Lightning Trainer for custom loops; set `report_to=["wandb"]` for tracking; export via `optimum`/ONNX for inference; deploy on SageMaker (HF DLC) or behind FastAPI.

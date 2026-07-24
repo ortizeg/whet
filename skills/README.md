@@ -48,7 +48,6 @@ Each skill includes:
 | `wandb` | Weights & Biases |
 | `mlflow` | MLflow tracking |
 | `tensorboard` | TensorBoard logging |
-| `dvc` | Data versioning |
 
 ### Meta
 | Skill | Purpose |

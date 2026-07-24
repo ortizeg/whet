@@ -136,4 +136,4 @@ Claude Code uses this context to generate code that follows the same patterns co
 
 - [First Project](first-project.md) -- A detailed walkthrough building a complete project
 - [Skills Overview](../skills/index.md) -- Browse all available skills
-- [Agents](../agents/index.md) -- Learn about agent personas for different task types
+- [Archetypes](../archetypes/index.md) -- Project templates for common CV/ML project types

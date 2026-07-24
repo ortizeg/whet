@@ -52,7 +52,6 @@ class WhetConfig(BaseModel):
 
     target: Platform = Platform.CLAUDE
     skills_dir: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[3] / "skills")
-    agents_dir: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[3] / "agents")
     archetypes_dir: Path = Field(
         default_factory=lambda: Path(__file__).resolve().parents[3] / "archetypes"
     )

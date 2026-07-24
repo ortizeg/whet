@@ -1,8 +1,0 @@
-[agent]
-name = "ml-engineer"
-version = "1.0.0"
-type = "advisory"
-tags = ["machine-learning", "training", "architecture", "optimization"]
-
-[ci]
-has_action = false

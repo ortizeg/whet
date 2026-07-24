@@ -195,7 +195,7 @@ You can define custom hooks for project-specific checks. Here are two useful exa
   hooks:
     - id: no-model-files
       name: Check for model files
-      entry: bash -c 'for f in "$@"; do case "$f" in *.pt|*.pth|*.onnx|*.pkl|*.h5) echo "ERROR: Model file $f should not be committed. Use DVC instead." && exit 1;; esac; done'
+      entry: bash -c 'for f in "$@"; do case "$f" in *.pt|*.pth|*.onnx|*.pkl|*.h5) echo "ERROR: Model file $f should not be committed. Use object storage or an artifact registry instead." && exit 1;; esac; done'
       language: system
       types: [file]
 ```

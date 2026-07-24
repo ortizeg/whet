@@ -15,7 +15,7 @@ The Master Skill reads user inputs including project name, author information, a
 
 - **Interactive project initialization** -- collects project name, author, description, and license through a guided flow.
 - **Archetype selection** -- offers predefined project templates (training, inference, research, library, pipeline, model-zoo) that pre-select relevant skills.
-- **Optional skill composition** -- allows toggling additional skills (Docker, CI/CD, DVC, MLflow) beyond the archetype defaults.
+- **Optional skill composition** -- allows toggling additional skills (Docker, CI/CD, MLflow) beyond the archetype defaults.
 - **Dependency resolution** -- ensures that skill prerequisites are satisfied before scaffolding begins.
 - **Idempotent generation** -- can be re-run safely to add skills to an existing project without overwriting customized files.
 - **Dry-run mode** -- previews the full file tree that would be generated before writing anything to disk.

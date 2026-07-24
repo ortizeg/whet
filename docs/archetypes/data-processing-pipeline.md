@@ -1,10 +1,10 @@
 # Data Processing Pipeline
 
-ETL workflows for dataset preparation, transformation, and validation with parallel processing and DVC integration.
+ETL workflows for dataset preparation, transformation, and validation with parallel processing and dataset versioning.
 
 ## Purpose
 
-This archetype structures dataset processing as a series of well-defined stages: download, preprocess, validate, split, and package. Each stage is a self-contained module with Pydantic-validated configuration, making pipelines reproducible and composable. DVC tracks large data assets, and parallel processing handles large-scale datasets efficiently.
+This archetype structures dataset processing as a series of well-defined stages: download, preprocess, validate, split, and package. Each stage is a self-contained module with Pydantic-validated configuration, making pipelines reproducible and composable. Large data assets live in object storage and are tracked by a content-hashed manifest, and parallel processing handles large-scale datasets efficiently.
 
 ## Directory Structure
 
@@ -36,7 +36,6 @@ This archetype structures dataset processing as a series of well-defined stages:
 │   ├── raw/
 │   ├── processed/
 │   └── splits/
-├── dvc.yaml                   # DVC pipeline definition
 ├── tests/
 │   ├── test_stages.py
 │   └── test_pipeline.py
@@ -69,9 +68,6 @@ uv run python -m my_project.pipeline
 
 # Run single stage
 uv run python -m my_project.pipeline stage=preprocess
-
-# Reproduce with DVC
-dvc repro
 ```
 
 ## Customization
@@ -79,4 +75,4 @@ dvc repro
 - Add new stages in `src/{{package_name}}/stages/`
 - Define stage configs in `configs/stages/`
 - Add image transforms in `transforms/`
-- Configure DVC remotes for data storage
+- Configure the object storage bucket and prefix used for dataset artifacts

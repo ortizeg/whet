@@ -14,7 +14,6 @@ Distribution: `uvx whet` (one-shot) / `uv tool install whet` (permanent)
 ### What whet provides
 
 - **32 Skills** — Best-practice knowledge modules (PyTorch Lightning, Pydantic, Docker, FastAPI, Hugging Face, AWS SageMaker, Gradio, Kubernetes, Model Evaluation, etc.)
-- **6 Agents** — Pre-configured behavioral profiles (Expert Coder, ML Engineer, DevOps/Infra, Data Engineer, Code Review, Test Engineer)
 - **6+ Archetypes** — Complete project templates for common CV/ML project types
 - **CLI** — `whet add`, `whet install`, `whet list`, `whet search`, `whet doctor`
 - **Multi-platform** — Claude Code, Google Antigravity, Cursor, GitHub Copilot
@@ -29,7 +28,6 @@ whet/
 │   ├── core/              # Domain models (Pydantic: skill, config)
 │   └── registry/          # Skill discovery, search, dependency resolution
 ├── skills/                # 25+ skill definitions (SKILL.md + README.md + skill.toml)
-├── agents/                # 4+ agent definitions (SKILL.md + README.md + agent.toml)
 ├── archetypes/            # 6+ project templates (README.md + archetype.toml + template/)
 ├── settings/              # Pre-built settings templates (claude.json, etc.)
 ├── docs/                  # MkDocs Material documentation
@@ -70,15 +68,6 @@ uv run mypy src/whet/ tests/ --strict
 5. Add nav entry to `mkdocs.yml` under Skills section
 
 Tests discover skills dynamically — no hardcoded lists to update.
-
-## How to Add a New Agent
-
-1. Create `agents/<name>/SKILL.md` — Must be >500 chars
-2. Create `agents/<name>/agent.toml` — Agent metadata (type: advisory/blocking, tags)
-3. Create `agents/<name>/README.md` — Agent overview
-4. If blocking agent: create `agents/<name>/action.yml`
-5. Create `docs/agents/<name>.md` — Documentation page
-6. Add nav entry to `mkdocs.yml` under Agents section
 
 ## How to Add a New Archetype
 

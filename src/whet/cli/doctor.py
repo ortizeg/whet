@@ -40,21 +40,7 @@ def doctor() -> None:
         issues += 1
         skills = []
 
-    # Check 2: Agents directory
-    if cfg.agents_dir.is_dir():
-        agents = [
-            d.name for d in cfg.agents_dir.iterdir() if d.is_dir() and (d / "SKILL.md").exists()
-        ]
-        n_agents = len(agents)
-        console.print(
-            f"  {_check_mark(True)} Agents directory: {cfg.agents_dir} ({n_agents} agents)"
-        )
-    else:
-        console.print(f"  {_warn_mark()} Agents directory not found: {cfg.agents_dir}")
-        warnings += 1
-        agents = []
-
-    # Check 3: Archetypes directory
+    # Check 2: Archetypes directory
     if cfg.archetypes_dir.is_dir():
         archetypes = [
             d.name
@@ -70,7 +56,7 @@ def doctor() -> None:
         console.print(f"  {_warn_mark()} Archetypes directory not found: {cfg.archetypes_dir}")
         warnings += 1
 
-    # Check 4: Platform detection
+    # Check 3: Platform detection
     detected = detect_platform()
     if detected:
         console.print(f"  {_check_mark(True)} Platform detected: {detected.value}")
@@ -78,7 +64,7 @@ def doctor() -> None:
         console.print(f"  {_warn_mark()} No platform auto-detected in current directory")
         warnings += 1
 
-    # Check 5: Installed skills
+    # Check 4: Installed skills
     if detected:
         from whet.cli.skills import _get_adapter
 
@@ -94,7 +80,7 @@ def doctor() -> None:
             console.print(f"  {_warn_mark()} No skills installed for {detected.value}")
             warnings += 1
 
-    # Check 6: SKILL.md frontmatter
+    # Check 5: SKILL.md frontmatter
     if skills:
         missing_fm = [s for s in skills if not s.description]
         if missing_fm:
@@ -106,7 +92,7 @@ def doctor() -> None:
         else:
             console.print(f"  {_check_mark(True)} All skills have YAML frontmatter")
 
-    # Check 7: skill.toml files
+    # Check 6: skill.toml files
     if skills:
         missing_toml = [s for s in skills if not s.has_toml]
         if missing_toml:
@@ -118,19 +104,7 @@ def doctor() -> None:
         else:
             console.print(f"  {_check_mark(True)} All skills have skill.toml metadata")
 
-    # Check 8: agent.toml files
-    if agents:
-        missing_agent_toml = [a for a in agents if not (cfg.agents_dir / a / "agent.toml").exists()]
-        if missing_agent_toml:
-            n_at = len(missing_agent_toml)
-            console.print(f"  {_warn_mark()} {n_at} agents missing agent.toml")
-            for a in missing_agent_toml[:5]:
-                console.print(f"    - {a}")
-            warnings += 1
-        else:
-            console.print(f"  {_check_mark(True)} All agents have agent.toml metadata")
-
-    # Check 9: Settings template
+    # Check 7: Settings template
     from whet.settings.engine import get_settings_target, get_template_path
 
     plat = detected.value if detected else cfg.target.value
@@ -151,7 +125,7 @@ def doctor() -> None:
         console.print(f"  {_warn_mark()} No settings template for {plat}")
         warnings += 1
 
-    # Check 10: Dependency consistency
+    # Check 8: Dependency consistency
     if skills:
         available = {s.name for s in skills}
         broken_deps = []

@@ -76,7 +76,7 @@ Skills for packaging, deploying, and maintaining projects.
 | [GitHub Repo Setup](github-repo-setup.md) | Repository initialization and configuration | gh CLI |
 | [Pre-commit](pre-commit.md) | Git hook automation | pre-commit |
 | [VS Code](vscode.md) | Editor configuration for ML development | VS Code |
-| [DVC](dvc.md) | Data and model version control | DVC |
+| [Data Pipelines](data-pipelines.md) | ETL, storage formats, leakage-free splitting, schema evolution | polars, Great Expectations |
 
 ### Process & Review
 
@@ -97,7 +97,7 @@ Skills for code review and architectural decisions.
 | **Building models** | PyTorch Lightning, Hydra Config |
 | **Training & experiments** | W&B or MLflow, TensorBoard |
 | **Preparing for production** | Docker CV, ONNX, Testing, Pre-commit |
-| **Publishing & sharing** | PyPI, GitHub Actions, DVC |
+| **Publishing & sharing** | PyPI, GitHub Actions |
 
 ### By Role
 
@@ -106,7 +106,7 @@ Skills for code review and architectural decisions.
 | **Researcher** | PyTorch Lightning, Hydra Config, Matplotlib, TensorBoard |
 | **ML Engineer** | All Core + Training + Infrastructure |
 | **CV Engineer** | OpenCV, PyTorch Lightning, ONNX, Docker CV |
-| **DevOps/MLOps** | Docker CV, GitHub Actions, DVC, Pixi |
+| **DevOps/MLOps** | Docker CV, GitHub Actions, Pixi |
 
 ## Combining Skills
 

@@ -90,7 +90,6 @@ pipeline = Pipeline(
 - **PyTorch Lightning** -- LightningModule inside SageMaker training jobs
 - **Docker CV** -- Custom training containers when default images are insufficient
 - **W&B / MLflow** -- Experiment tracking inside SageMaker training containers
-- **DVC** -- Data versioning with S3 remote storage
 - **GCP** -- Alternative cloud platform patterns for comparison
 
 ## Full Reference

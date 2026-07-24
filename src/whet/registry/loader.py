@@ -1,4 +1,4 @@
-"""Scan and parse skills and agents from disk."""
+"""Scan and parse skills from disk."""
 
 from __future__ import annotations
 
@@ -13,14 +13,6 @@ def discover_skills(skills_dir: Path) -> list[Skill]:
     Scans for subdirectories containing SKILL.md and loads each as a Skill.
     """
     return _discover(skills_dir)
-
-
-def discover_agents(agents_dir: Path) -> list[Skill]:
-    """Discover all agents in a directory.
-
-    Agents use the same SKILL.md format as skills.
-    """
-    return _discover(agents_dir)
 
 
 def _discover(base_dir: Path) -> list[Skill]:
