@@ -19,10 +19,10 @@ The archetype is built around three pillars: PyTorch Lightning for structured tr
 
 ## Directory Structure
 
-The rendered project (`<package_name>` is derived from the project name):
+The rendered project (`${package_name}` is derived from the project name):
 
 ```
-<project_slug>/
+${project_slug}/
 ├── .gitignore
 ├── pixi.toml                        # Environment, dependencies, and tasks
 ├── pyproject.toml                   # Package metadata + ruff/mypy/pytest config
@@ -37,7 +37,7 @@ The rendered project (`<package_name>` is derived from the project name):
 │   └── trainer/
 │       ├── default.yaml             # Standard training settings
 │       └── debug.yaml               # Single-batch CPU smoke run
-├── src/<package_name>/
+├── src/${package_name}/
 │   ├── __init__.py
 │   ├── model.py                     # Classifier LightningModule + ModelConfig
 │   ├── data.py                      # ImageDataModule + DataConfig
@@ -114,17 +114,17 @@ pixi install
 
 ```bash
 # Run training with the default configuration
-python -m <package_name>.train
+python -m ${package_name}.train
 
 # Override specific config values from the command line
-python -m <package_name>.train model.learning_rate=1e-4 trainer.max_epochs=50
+python -m ${package_name}.train model.learning_rate=1e-4 trainer.max_epochs=50
 
 # Swap a config group preset
-python -m <package_name>.train model=resnet50
-python -m <package_name>.train trainer=debug
+python -m ${package_name}.train model=resnet50
+python -m ${package_name}.train trainer=debug
 
 # Run a Hydra multirun sweep
-python -m <package_name>.train --multirun model.learning_rate=1e-3,1e-4,1e-5
+python -m ${package_name}.train --multirun model.learning_rate=1e-3,1e-4,1e-5
 ```
 
 Equivalent pixi tasks: `pixi run train`, `pixi run debug`.
@@ -142,7 +142,7 @@ mypy src/ --strict        # or: pixi run typecheck
 
 ### Adding a New Model Architecture
 
-1. Extend `ModelConfig` in `src/<package_name>/model.py` with the new architecture hyperparameters (use `pydantic.Field` constraints).
+1. Extend `ModelConfig` in `src/${package_name}/model.py` with the new architecture hyperparameters (use `pydantic.Field` constraints).
 2. Teach `Classifier._build_backbone` how to construct it, or split backbone construction into its own module once there is more than one.
 3. Add a Hydra YAML file in `configs/model/` (e.g. `efficientnet.yaml`) with the full set of `ModelConfig` keys.
 4. Add a test in `tests/test_model.py` verifying forward-pass shapes, and one in `tests/test_train.py` verifying the new config group composes.
@@ -153,14 +153,14 @@ mypy src/ --strict        # or: pixi run typecheck
 1. Implement a `torch.utils.data.Dataset` returning `(image, label)` tuples — the contract `training_step` and `validation_step` unpack.
 2. Instantiate it in `ImageDataModule.setup` in place of `torchvision.datasets.FakeData`.
 3. Extend `DataConfig` with the paths, split ratios, and preprocessing options it needs, and mirror them in `configs/data/default.yaml`.
-4. Extend `src/<package_name>/transforms.py` with the augmentation pipeline for the new data.
+4. Extend `src/${package_name}/transforms.py` with the augmentation pipeline for the new data.
 
 ### Adding Custom Callbacks
 
 1. Create a callback inheriting from `lightning.pytorch.Callback`.
-2. Instantiate it in `build_trainer` in `src/<package_name>/train.py`, driven by a new config group (e.g. `configs/callbacks/`).
+2. Instantiate it in `build_trainer` in `src/${package_name}/train.py`, driven by a new config group (e.g. `configs/callbacks/`).
 3. Common additions include early stopping, model checkpointing, learning rate monitors, and prediction visualizers.
 
 ### Enabling Experiment Tracking
 
-Lightning loggers are wired in `build_trainer` in `src/<package_name>/train.py`. Supported integrations include Weights and Biases (`WandbLogger`), MLflow (`MLFlowLogger`), and TensorBoard (`TensorBoardLogger`). Give each logger its own Hydra config group so the choice is a command-line override rather than a code edit.
+Lightning loggers are wired in `build_trainer` in `src/${package_name}/train.py`. Supported integrations include Weights and Biases (`WandbLogger`), MLflow (`MLFlowLogger`), and TensorBoard (`TensorBoardLogger`). Give each logger its own Hydra config group so the choice is a command-line override rather than a code edit.

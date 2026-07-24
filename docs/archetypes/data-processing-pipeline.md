@@ -9,37 +9,33 @@ This archetype structures dataset processing as a series of well-defined stages:
 ## Directory Structure
 
 ```
-{{project_slug}}/
-├── src/{{package_name}}/
-│   ├── __init__.py
-│   ├── pipeline.py            # Pipeline orchestrator
-│   ├── stages/
-│   │   ├── __init__.py
-│   │   ├── base.py            # Abstract stage interface
-│   │   ├── download.py
-│   │   ├── preprocess.py
-│   │   ├── validate.py
-│   │   ├── split.py
-│   │   └── export.py
-│   ├── transforms/
-│   │   ├── __init__.py
-│   │   └── image.py
-│   └── schemas/
+${project_slug}/
+├── conf/
+│   └── pipeline.toml
+├── src/
+│   └── ${package_name}/
 │       ├── __init__.py
-│       └── dataset.py         # Pydantic data schemas
-├── configs/
-│   ├── pipeline.yaml
-│   └── stages/
-│       ├── download.yaml
-│       └── preprocess.yaml
-├── data/
-│   ├── raw/
-│   ├── processed/
-│   └── splits/
+│       ├── __main__.py
+│       ├── cli.py
+│       ├── config.py
+│       ├── manifest.py
+│       ├── pipeline.py
+│       ├── py.typed
+│       ├── quality.py
+│       ├── sample_data.py
+│       ├── splitting.py
+│       └── stages.py
 ├── tests/
-│   ├── test_stages.py
-│   └── test_pipeline.py
-└── ...
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── test_manifest.py
+│   ├── test_pipeline.py
+│   ├── test_quality.py
+│   └── test_splitting.py
+├── .gitignore
+├── README.md
+├── pixi.toml
+└── pyproject.toml
 ```
 
 ## Pipeline Stage Interface

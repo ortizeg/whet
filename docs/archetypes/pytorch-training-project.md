@@ -9,35 +9,34 @@ This archetype provides a complete training pipeline structure for computer visi
 ## Directory Structure
 
 ```
-{{project_slug}}/
+${project_slug}/
 ├── configs/
-│   ├── config.yaml            # Main Hydra config
+│   ├── data/
+│   │   └── default.yaml
 │   ├── model/
-│   │   ├── resnet.yaml
-│   │   └── efficientnet.yaml
-│   ├── data/
-│   │   └── coco.yaml
-│   └── trainer/
-│       ├── default.yaml
-│       └── debug.yaml
-├── src/{{package_name}}/
-│   ├── __init__.py
-│   ├── train.py               # Hydra entry point
-│   ├── models/
-│   │   ├── __init__.py
-│   │   ├── base.py            # Abstract model interface
-│   │   └── detector.py        # Concrete LightningModule
-│   ├── data/
-│   │   ├── __init__.py
-│   │   └── datamodule.py      # LightningDataModule
-│   └── utils/
+│   │   ├── default.yaml
+│   │   └── resnet50.yaml
+│   ├── trainer/
+│   │   ├── debug.yaml
+│   │   └── default.yaml
+│   └── config.yaml
+├── src/
+│   └── ${package_name}/
 │       ├── __init__.py
-│       └── metrics.py
+│       ├── data.py
+│       ├── model.py
+│       ├── train.py
+│       └── transforms.py
 ├── tests/
+│   ├── __init__.py
 │   ├── conftest.py
+│   ├── test_data.py
 │   ├── test_model.py
-│   └── test_data.py
-└── ...                        # Common base files
+│   └── test_train.py
+├── .gitignore
+├── README.md
+├── pixi.toml
+└── pyproject.toml
 ```
 
 ## Key Components

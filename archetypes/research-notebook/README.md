@@ -27,7 +27,7 @@ Everything else follows from those two. Data paths come from a single `PATHS` ob
 This is exactly what `whet init research-notebook` writes — no more, no less.
 
 ```
-<project_slug>/
+${project_slug}/
 ├── .gitignore                          # ignores checkpoints, data/, outputs/
 ├── .pre-commit-config.yaml             # nbstripout + ruff + mypy + hygiene hooks
 ├── pixi.toml                           # environment and tasks (lab, test, quality)
@@ -37,7 +37,7 @@ This is exactly what `whet init research-notebook` writes — no more, no less.
 │   ├── README.md                       # naming convention + reproducibility checklist
 │   ├── _template.ipynb                 # copy this to start a new notebook
 │   └── 01-abc-explore-dataset.ipynb    # runnable worked example
-├── src/<package_name>/
+├── src/${package_name}/
 │   ├── __init__.py
 │   ├── py.typed
 │   ├── config.py                       # Pydantic V2 ExperimentConfig + PATHS
@@ -214,7 +214,7 @@ ablation = cfg.variant(seed=7, stage="ablation")   # validated copy
 
 ### Adding New Utility Modules
 
-Place reusable functions in `src/<package_name>/` rather than duplicating them across notebooks. Common additions include dataset loaders, custom augmentation pipelines, domain-specific evaluation metrics, and specialized parsers. Every utility module gets corresponding tests in `tests/` — if a helper is too tangled to test, it is too tangled to trust inside a notebook.
+Place reusable functions in `src/${package_name}/` rather than duplicating them across notebooks. Common additions include dataset loaders, custom augmentation pipelines, domain-specific evaluation metrics, and specialized parsers. Every utility module gets corresponding tests in `tests/` — if a helper is too tangled to test, it is too tangled to trust inside a notebook.
 
 ### Replacing the Synthetic Data
 
@@ -222,7 +222,7 @@ Place reusable functions in `src/<package_name>/` rather than duplicating them a
 
 ### Graduating to a Training Project
 
-When an experiment proves successful and needs to scale, use the PyTorch Training Project archetype to create a production training codebase. Move the validated helpers out of `src/<package_name>/`, translate `ExperimentConfig` fields into Hydra configs, and set up proper data loading with the LightningDataModule pattern. Leave the notebook behind as the record of *why*.
+When an experiment proves successful and needs to scale, use the PyTorch Training Project archetype to create a production training codebase. Move the validated helpers out of `src/${package_name}/`, translate `ExperimentConfig` fields into Hydra configs, and set up proper data loading with the LightningDataModule pattern. Leave the notebook behind as the record of *why*.
 
 ### Managing Large Data
 
@@ -230,4 +230,4 @@ When an experiment proves successful and needs to scale, use the PyTorch Trainin
 
 ### Custom Plotting Styles
 
-Edit `FIGURE_STYLE` in `src/<package_name>/viz.py` to define a consistent visual identity across the project, and call `viz.use_project_style()` once in each notebook's setup cell. Add template functions for common plot types (confusion matrices, ROC curves, training loss curves) alongside the existing helpers so every figure in the project looks the same without per-plot fiddling.
+Edit `FIGURE_STYLE` in `src/${package_name}/viz.py` to define a consistent visual identity across the project, and call `viz.use_project_style()` once in each notebook's setup cell. Add template functions for common plot types (confusion matrices, ROC curves, training loss curves) alongside the existing helpers so every figure in the project looks the same without per-plot fiddling.

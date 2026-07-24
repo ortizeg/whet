@@ -11,6 +11,7 @@ so a regression in the engine is caught too.
 from __future__ import annotations
 
 import ast
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -251,3 +252,81 @@ def test_composition_matches_what_template_ships(
         assert "code-quality" in required, (
             f"{archetype.path.name} configures ruff/mypy but does not require 'code-quality'"
         )
+
+
+def _documented_paths(readme: Path) -> set[str]:
+    """Leaf names mentioned in a README's ASCII directory tree(s)."""
+    names: set[str] = set()
+    for line in readme.read_text().split("\n"):
+        if "├──" not in line and "└──" not in line:
+            continue
+        entry = re.sub(r"^.*[├└]──\s*", "", line)
+        entry = entry.split("#")[0].strip().rstrip("/")
+        if entry:
+            # A tree row may show a nested path (data/raw/.gitkeep); take the leaf.
+            names.add(entry.split("/")[-1])
+    return names
+
+
+@pytest.mark.parametrize("archetype", all_archetypes(), ids=lambda a: a.path.name)
+def test_readme_tree_matches_template(archetype: Archetype, rendered: dict[str, Path]) -> None:
+    """An archetype README must not document files its template does not ship.
+
+    The READMEs previously described directory trees that nothing generated. Trees
+    are hand-maintained prose, so without a check they drift silently the moment a
+    template changes.
+    """
+    readme = archetype.path / "README.md"
+    if not readme.is_file():
+        return
+
+    root = rendered[archetype.path.name]
+    actual = {p.name for p in root.rglob("*")}
+    # The rendered package dir is named after the project, so accept the
+    # placeholder spelling the README uses for it.
+    actual |= {"${package_name}", "${project_slug}"}
+
+    documented = _documented_paths(readme)
+    ghosts = sorted(d for d in documented if d not in actual)
+
+    assert not ghosts, (
+        f"{archetype.path.name} README documents files its template does not ship: {ghosts}"
+    )
+
+
+@pytest.mark.parametrize("archetype", all_archetypes(), ids=lambda a: a.path.name)
+def test_readme_uses_real_placeholder_syntax(archetype: Archetype) -> None:
+    """READMEs must use ${var}; {{var}} is inert in this engine and <var> is invented."""
+    readme = archetype.path / "README.md"
+    if not readme.is_file():
+        return
+
+    text = readme.read_text()
+    bad = re.findall(r"\{\{\s*(?:project_slug|package_name|project_name|author)\s*\}\}", text)
+    bad += re.findall(r"<(?:project_slug|package_name|project_name)>", text)
+    assert not bad, (
+        f"{archetype.path.name} README uses placeholder syntax the scaffold engine "
+        f"does not substitute: {sorted(set(bad))}; use ${{var}}"
+    )
+
+
+@pytest.mark.parametrize("archetype", all_archetypes(), ids=lambda a: a.path.name)
+def test_docs_page_tree_matches_template(archetype: Archetype, rendered: dict[str, Path]) -> None:
+    """The published docs page must not document files the template does not ship.
+
+    The docs pages are a second copy of each directory tree, so they rot
+    independently of the archetype README — and did, by 78 files.
+    """
+    doc = Path("docs/archetypes") / f"{archetype.path.name}.md"
+    if not doc.is_file():
+        return
+
+    root = rendered[archetype.path.name]
+    actual = {p.name for p in root.rglob("*")}
+    actual |= {"${package_name}", "${project_slug}"}
+
+    ghosts = sorted(d for d in _documented_paths(doc) if d not in actual)
+    assert not ghosts, (
+        f"docs/archetypes/{archetype.path.name}.md documents files the template "
+        f"does not ship: {ghosts}"
+    )
