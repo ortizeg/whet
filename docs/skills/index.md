@@ -23,6 +23,19 @@ stay out of the default trigger surface. Install them with:
 whet install --include-extras
 ```
 
+## Keeping an Install in Sync
+
+`whet install` copies skills but does not remove ones deleted upstream. Use `--prune` to
+clear them out:
+
+```bash
+whet install --prune
+```
+
+Prune only removes skills recorded in the target directory's `.whet-manifest.json` — the
+record of what whet installed there. Skills placed in the same directory by other tools
+are never touched.
+
 ## Companion Skills
 
 whet does not ship a general product-UI ruleset — `gradio` covers ML demos only. For
