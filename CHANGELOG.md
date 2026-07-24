@@ -71,6 +71,12 @@ authoring rules are now enforced in CI rather than by discipline.
 
 ### Fixed
 
+- **The published wheel shipped no skills.** `[tool.hatch.build.targets.wheel]` packaged
+  only `src/whet`, and the bundled directories were resolved relative to the repository
+  root — so `uv tool install whet` produced a CLI that reported "No skills found" outside
+  a source checkout. The wheel now force-includes `skills/`, `archetypes/`, and
+  `settings/` under `whet/_data/`, and a single resolver prefers the packaged copy while
+  falling back to the repo layout for development.
 - Template files under a `data/` path were silently excluded by the repository's own
   `.gitignore`, so a clean checkout produced projects missing `data/raw`, `data/processed`,
   and an entire Hydra `data` config group.
