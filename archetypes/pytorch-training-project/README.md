@@ -19,104 +19,84 @@ The archetype is built around three pillars: PyTorch Lightning for structured tr
 
 ## Directory Structure
 
+The rendered project (`<package_name>` is derived from the project name):
+
 ```
-{{project_slug}}/
-├── .github/
-│   └── workflows/
-│       ├── code-review.yml          # Automated PR code review
-│       └── test.yml                 # CI test pipeline
+<project_slug>/
 ├── .gitignore
-├── .pre-commit-config.yaml          # Pre-commit hooks (ruff, mypy)
-├── pixi.toml                        # Pixi package manager config
-├── pyproject.toml                   # Project metadata and tool config
+├── pixi.toml                        # Environment, dependencies, and tasks
+├── pyproject.toml                   # Package metadata + ruff/mypy/pytest config
 ├── README.md                        # Generated project README
-├── conf/                            # Hydra configuration directory
-│   ├── config.yaml                  # Root config (composes groups)
-│   ├── training/
-│   │   ├── default.yaml             # Standard training settings
-│   │   └── fast.yaml                # Quick iteration settings
+├── configs/                         # Hydra configuration tree
+│   ├── config.yaml                  # Root config (defaults list + seed)
+│   ├── model/
+│   │   ├── default.yaml             # resnet18 backbone
+│   │   └── resnet50.yaml            # Alternate backbone preset
 │   ├── data/
 │   │   └── default.yaml             # Data loading config
-│   └── model/
-│       └── default.yaml             # Model architecture config
-├── src/{{package_name}}/
+│   └── trainer/
+│       ├── default.yaml             # Standard training settings
+│       └── debug.yaml               # Single-batch CPU smoke run
+├── src/<package_name>/
 │   ├── __init__.py
-│   ├── py.typed                     # PEP 561 type marker
-│   ├── configs/                     # Pydantic config models
-│   │   ├── __init__.py
-│   │   ├── training.py              # TrainingConfig dataclass
-│   │   ├── data.py                  # DataConfig dataclass
-│   │   └── model.py                 # ModelConfig dataclass
-│   ├── data/                        # Data loading pipeline
-│   │   ├── __init__.py
-│   │   ├── datamodule.py            # LightningDataModule
-│   │   ├── dataset.py               # Dataset implementations
-│   │   └── transforms.py           # Albumentations pipelines
-│   ├── models/                      # Model definitions
-│   │   ├── __init__.py
-│   │   ├── module.py                # LightningModule (train/val/test)
-│   │   └── backbone.py             # Backbone network definitions
-│   ├── callbacks/                   # Lightning callbacks
-│   │   ├── __init__.py
-│   │   └── visualization.py        # Prediction visualization
-│   ├── metrics/                     # Custom metrics
-│   │   ├── __init__.py
-│   │   └── accuracy.py             # Task-specific metrics
-│   └── utils/                       # Shared utilities
-│       ├── __init__.py
-│       └── io.py                    # File I/O helpers
-├── scripts/
-│   ├── train.py                     # Training entry point
-│   ├── evaluate.py                  # Model evaluation script
-│   └── export.py                    # ONNX/TorchScript export
-├── notebooks/
-│   └── exploration.ipynb            # Data exploration notebook
+│   ├── model.py                     # Classifier LightningModule + ModelConfig
+│   ├── data.py                      # ImageDataModule + DataConfig
+│   ├── transforms.py                # torchvision transform pipelines
+│   └── train.py                     # Hydra entry point, TrainerConfig, ExperimentConfig
 └── tests/
     ├── __init__.py
     ├── conftest.py                  # Shared fixtures
-    ├── unit/
-    │   ├── test_model.py
-    │   ├── test_data.py
-    │   └── test_configs.py
-    └── integration/
-        └── test_training.py         # End-to-end training test
+    ├── test_model.py                # Forward pass + train/val step contracts
+    ├── test_data.py                 # Dataloader batch contract
+    └── test_train.py                # Config composition + fast_dev_run smoke test
 ```
+
+Everything above is a starting point: grow `model.py`/`data.py` into packages
+(`models/`, `data/`) once the project outgrows single modules.
 
 ## Key Features
 
 - **PyTorch Lightning** for structured, boilerplate-free training loops with automatic mixed precision, gradient accumulation, and distributed training.
 - **Hydra** for hierarchical configuration management with command-line overrides, config composition, and multirun sweeps.
-- **Pydantic** for strict runtime validation of all configuration values before training begins, catching typos and type errors early.
-- **Full type safety** with mypy strict mode enabled by default and a `py.typed` marker for downstream consumers.
-- **Pre-configured CI/CD** with GitHub Actions workflows for automated testing and code review.
-- **Albumentations** integration for high-performance image augmentation pipelines.
+- **Pydantic V2** for strict runtime validation of every configuration value before training begins, catching typos and out-of-range values early.
+- **Loguru** as the single logging convention — no `print`, no `logging.getLogger`.
+- **Pixi** as the environment manager, with tasks for train, test, lint, format, and typecheck.
+- **Type safety** with mypy strict mode enabled by default.
+- **Tested by default** — the generated project ships tests that cover the batch contract, the config tree, and an end-to-end `fast_dev_run`.
 - **Experiment tracking** integration points for Weights and Biases, MLflow, or TensorBoard (opt-in via Lightning loggers).
 
 ## Configuration Variables
 
+These are the variables the scaffold engine substitutes into template files:
+
 | Variable | Description | Default |
 |---|---|---|
-| `{{project_name}}` | Human-readable project name displayed in docs and logs | Required |
-| `{{project_slug}}` | URL-safe directory name derived from the project name | Auto-generated |
-| `{{package_name}}` | Python import name (underscored, PEP 8 compliant) | Auto-generated |
-| `{{author_name}}` | Author full name for pyproject.toml | Required |
-| `{{email}}` | Author email for pyproject.toml | Required |
-| `{{description}}` | One-line project description | Required |
-| `{{version}}` | Initial semantic version | 0.1.0 |
-| `{{python_version}}` | Minimum Python version constraint | 3.11 |
+| `project_name` | Human-readable project name displayed in docs and logs | Required |
+| `project_slug` | URL-safe directory and distribution name | Derived from `project_name` |
+| `package_name` | Python import name (underscored, PEP 8 compliant) | Derived from `project_slug` |
+| `description` | One-line project description | Empty |
+| `author` | Author name for `pyproject.toml` / `pixi.toml` | Empty |
+| `python_version` | Minimum Python version constraint | 3.11 |
 
 ## Dependencies
 
+Declared in the generated `pixi.toml` (and mirrored in `[project].dependencies`):
+
 ```toml
-[dependencies]
-python = ">=3.11"
-pytorch = ">=2.0"
-pytorch-lightning = ">=2.0"
+[pypi-dependencies]
+torch = ">=2.2"
+torchvision = ">=0.17"
+lightning = ">=2.2"
+torchmetrics = ">=1.3"
 hydra-core = ">=1.3"
-pydantic = ">=2.0"
-albumentations = ">=1.3"
-torchmetrics = ">=1.0"
-onnx = ">=1.14"
+pydantic = ">=2.6"
+loguru = ">=0.7"
+
+[feature.dev.dependencies]
+pytest = ">=7.4"
+pytest-cov = ">=4.1"
+ruff = ">=0.8"
+mypy = ">=1.11"
 ```
 
 ## Usage
@@ -124,79 +104,63 @@ onnx = ">=1.14"
 ### Project Initialization
 
 ```bash
-# Start Claude and request project creation
-claude
-You: "Create a pytorch-training-project for object detection called 'yolo-detector'"
+whet init pytorch-training-project --name yolo-detector
 
-# Navigate into the generated project
 cd yolo-detector
-
-# Install all dependencies via pixi
 pixi install
 ```
 
 ### Training
 
 ```bash
-# Run training with default configuration
-pixi run python scripts/train.py
+# Run training with the default configuration
+python -m <package_name>.train
 
 # Override specific config values from the command line
-pixi run python scripts/train.py training.learning_rate=1e-4 training.epochs=50
+python -m <package_name>.train model.learning_rate=1e-4 trainer.max_epochs=50
 
-# Use a different config group preset
-pixi run python scripts/train.py training=fast
+# Swap a config group preset
+python -m <package_name>.train model=resnet50
+python -m <package_name>.train trainer=debug
 
 # Run a Hydra multirun sweep
-pixi run python scripts/train.py --multirun training.learning_rate=1e-3,1e-4,1e-5
+python -m <package_name>.train --multirun model.learning_rate=1e-3,1e-4,1e-5
 ```
 
-### Evaluation and Export
+Equivalent pixi tasks: `pixi run train`, `pixi run debug`.
+
+### Testing and Quality
 
 ```bash
-# Evaluate a trained checkpoint
-pixi run python scripts/evaluate.py checkpoint_path=outputs/best.ckpt
-
-# Export to ONNX for deployment
-pixi run python scripts/export.py checkpoint_path=outputs/best.ckpt export.format=onnx
-```
-
-### Testing
-
-```bash
-# Run the full test suite
-pixi run pytest
-
-# Run only unit tests
-pixi run pytest tests/unit/
-
-# Run with coverage
-pixi run pytest --cov=src/
+pytest                    # or: pixi run test
+pytest --cov=src/
+ruff check .              # or: pixi run lint
+mypy src/ --strict        # or: pixi run typecheck
 ```
 
 ## Customization Guide
 
 ### Adding a New Model Architecture
 
-1. Create a new module in `src/{{package_name}}/models/` (e.g., `efficientnet.py`).
-2. Define a Pydantic config in `src/{{package_name}}/configs/model.py` with all architecture hyperparameters.
-3. Add a corresponding Hydra YAML file in `conf/model/` (e.g., `efficientnet.yaml`) that sets `_target_` to your new class.
-4. Write unit tests in `tests/unit/test_model.py` verifying forward pass shapes and gradient flow.
-5. The training script will automatically discover the new model through Hydra's config group mechanism.
+1. Extend `ModelConfig` in `src/<package_name>/model.py` with the new architecture hyperparameters (use `pydantic.Field` constraints).
+2. Teach `Classifier._build_backbone` how to construct it, or split backbone construction into its own module once there is more than one.
+3. Add a Hydra YAML file in `configs/model/` (e.g. `efficientnet.yaml`) with the full set of `ModelConfig` keys.
+4. Add a test in `tests/test_model.py` verifying forward-pass shapes, and one in `tests/test_train.py` verifying the new config group composes.
+5. Select it from the CLI with `model=efficientnet` — no code changes to the entry point.
 
 ### Adding New Data Sources
 
-1. Implement a `torch.utils.data.Dataset` subclass in `src/{{package_name}}/data/dataset.py`.
-2. Add a Pydantic config in `src/{{package_name}}/configs/data.py` with paths, split ratios, and preprocessing options.
-3. Create a Hydra YAML file in `conf/data/` referencing your new dataset class.
-4. Update the `LightningDataModule` in `datamodule.py` to instantiate the new dataset.
+1. Implement a `torch.utils.data.Dataset` returning `(image, label)` tuples — the contract `training_step` and `validation_step` unpack.
+2. Instantiate it in `ImageDataModule.setup` in place of `torchvision.datasets.FakeData`.
+3. Extend `DataConfig` with the paths, split ratios, and preprocessing options it needs, and mirror them in `configs/data/default.yaml`.
+4. Extend `src/<package_name>/transforms.py` with the augmentation pipeline for the new data.
 
 ### Adding Custom Callbacks
 
-1. Create a new callback in `src/{{package_name}}/callbacks/` inheriting from `lightning.pytorch.Callback`.
-2. Register it in the Hydra config under `config.yaml` or a dedicated `callbacks/` config group.
-3. Common additions include early stopping schedulers, learning rate finders, and gradient norm loggers.
+1. Create a callback inheriting from `lightning.pytorch.Callback`.
+2. Instantiate it in `build_trainer` in `src/<package_name>/train.py`, driven by a new config group (e.g. `configs/callbacks/`).
+3. Common additions include early stopping, model checkpointing, learning rate monitors, and prediction visualizers.
 
 ### Enabling Experiment Tracking
 
-Lightning loggers can be added to the trainer by specifying them in the Hydra config or programmatically in `scripts/train.py`. Supported integrations include Weights and Biases (`WandbLogger`), MLflow (`MLFlowLogger`), and TensorBoard (`TensorBoardLogger`). Each logger is configured through its own Hydra config group for clean separation.
+Lightning loggers are wired in `build_trainer` in `src/<package_name>/train.py`. Supported integrations include Weights and Biases (`WandbLogger`), MLflow (`MLFlowLogger`), and TensorBoard (`TensorBoardLogger`). Give each logger its own Hydra config group so the choice is a command-line override rather than a code edit.

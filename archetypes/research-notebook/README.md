@@ -6,9 +6,12 @@ A structured Jupyter-based project template for rapid experimentation, prototypi
 
 Research work in machine learning is inherently iterative and exploratory. Notebooks are the natural medium for this work because they combine code execution, visualization, and narrative documentation in a single artifact. However, unstructured notebook projects quickly devolve into a tangle of unnamed files, hidden state dependencies, and unreproducible results.
 
-The Research Notebook archetype solves this by imposing lightweight conventions on notebook organization, naming, and data management without sacrificing the flexibility that makes notebooks valuable. It includes utility modules for common operations, integration points for experiment tracking, and a clear pathway for promoting successful experiments to standalone scripts or full training projects.
+The Research Notebook archetype solves this by imposing two lightweight rules and shipping the tooling that enforces them:
 
-Every notebook in this archetype follows a numbered naming convention, includes a purpose statement in its first cell, and declares its dependencies explicitly. Shared utility code lives in importable Python modules rather than being copy-pasted between notebooks, and data paths are managed through a centralized configuration rather than hardcoded strings.
+1. **Notebooks explore; `src/` remembers.** A cell worth running twice becomes a typed, tested function in `src/<package>/` and is imported back into the notebook. Notebooks stay narrative — question, look, plot, conclude.
+2. **Notebooks stay diff-able.** Committed notebooks carry no outputs and no execution counts, enforced by an `nbstripout` pre-commit hook. A notebook then reviews like source code rather than like a binary blob.
+
+Everything else follows from those two. Data paths come from a single `PATHS` object, every run is described by one validated Pydantic `ExperimentConfig`, and randomness goes through a seeded generator — so a notebook's results survive being cleared and rerun.
 
 ## Use Cases
 
@@ -21,107 +24,123 @@ Every notebook in this archetype follows a numbered naming convention, includes 
 
 ## Directory Structure
 
+This is exactly what `whet init research-notebook` writes — no more, no less.
+
 ```
-{{project_slug}}/
-├── .gitignore
-├── .pre-commit-config.yaml
-├── pixi.toml
-├── pyproject.toml
+<project_slug>/
+├── .gitignore                          # ignores checkpoints, data/, outputs/
+├── .pre-commit-config.yaml             # nbstripout + ruff + mypy + hygiene hooks
+├── pixi.toml                           # environment and tasks (lab, test, quality)
+├── pyproject.toml                      # deps, ruff, mypy strict, pytest
 ├── README.md
 ├── notebooks/
-│   ├── 01_data_exploration.ipynb       # Dataset overview and statistics
-│   ├── 02_preprocessing_test.ipynb     # Augmentation and transform tests
-│   ├── 03_baseline_model.ipynb         # First model prototype
-│   ├── 04_experiment_tracking.ipynb    # Tracked experiment runs
-│   └── _template.ipynb                 # Blank template with standard cells
-├── src/{{package_name}}/
+│   ├── README.md                       # naming convention + reproducibility checklist
+│   ├── _template.ipynb                 # copy this to start a new notebook
+│   └── 01-abc-explore-dataset.ipynb    # runnable worked example
+├── src/<package_name>/
 │   ├── __init__.py
-│   ├── config.py                       # Centralized paths and settings
-│   ├── plotting.py                     # Reusable plotting functions
-│   ├── data_utils.py                   # Data loading helpers
-│   ├── model_utils.py                  # Model construction helpers
-│   └── eval_utils.py                   # Evaluation and metric helpers
+│   ├── py.typed
+│   ├── config.py                       # Pydantic V2 ExperimentConfig + PATHS
+│   ├── data.py                         # seeded RNG, synthetic data, splits, summaries
+│   └── viz.py                          # reusable Matplotlib helpers + project style
 ├── data/
-│   ├── raw/                            # Original unmodified data
-│   │   └── .gitkeep
-│   ├── processed/                      # Cleaned and transformed data
-│   │   └── .gitkeep
-│   └── external/                       # Third-party datasets
-│       └── .gitkeep
+│   ├── raw/.gitkeep                    # original, immutable inputs
+│   └── processed/.gitkeep              # derived data from a reproducible step
 ├── outputs/
-│   ├── figures/                        # Saved plots and visualizations
-│   │   └── .gitkeep
-│   ├── models/                         # Saved checkpoints
-│   │   └── .gitkeep
-│   └── reports/                        # Generated reports
-│       └── .gitkeep
-├── scripts/
-│   ├── setup_data.py                   # Download and prepare data
-│   └── export_notebook.py             # Convert notebook to script
-├── references/
-│   └── .gitkeep                        # Papers, links, notes
+│   ├── figures/.gitkeep                # saved figures (not cell outputs)
+│   └── reports/.gitkeep                # metric dumps and exported tables
 └── tests/
     ├── __init__.py
-    └── test_utils.py                   # Tests for utility modules
+    ├── conftest.py                     # headless Agg backend, shared fixtures
+    ├── test_config.py
+    ├── test_data.py
+    └── test_viz.py
 ```
+
+The generated project has **no torch and no GPU dependency**. Its runtime deps are
+`numpy`, `matplotlib`, `pydantic`, and `loguru`; Jupyter lives in a `notebook`
+extra. The example notebook runs end to end on a fresh clone with no download.
 
 ## Key Features
 
-- **Numbered notebook convention** for clear execution order and logical progression through an analysis.
-- **Notebook template** with standardized header cells for purpose, author, date, and dependency declarations.
-- **Importable utility modules** that keep notebooks focused on analysis rather than boilerplate code.
-- **Centralized configuration** for data paths, output directories, and experiment parameters.
-- **Data directory structure** that separates raw, processed, and external data with gitkeep placeholders.
-- **Output management** with dedicated directories for figures, model checkpoints, and generated reports.
-- **Export pipeline** for converting validated notebooks into standalone Python scripts.
-- **Pre-commit hooks** with notebook-specific linting and output stripping.
+- **Runnable example notebook** (`01-abc-explore-dataset.ipynb`) that imports every helper from `src/`, demonstrating the discipline rather than describing it.
+- **`nbstripout` pre-commit hook** so cell outputs and execution counts never reach git.
+- **Numbered, initialled notebook convention** (`NN-initials-topic.ipynb`) for clear ownership and reading order.
+- **Notebook template** (`_template.ipynb`) with the standard header, setup, and conclusions cells.
+- **Importable, tested utility modules** under `src/` with `py.typed`, so notebooks stay short.
+- **Pydantic V2 `ExperimentConfig`** — frozen, `extra="forbid"`, with a `variant()` helper for ablations and validation that fires at construction time.
+- **Centralized `PATHS`** for `data/raw`, `data/processed`, `outputs/figures`, `outputs/reports`.
+- **Loguru everywhere** — no `print`, no stdlib `logging`.
+- **Full quality gate**: `ruff` (line-length 100; `E,F,I,N,UP,S,B,A,C4,T20,SIM`), `mypy --strict`, and `pytest`.
 
 ## Notebook Conventions
 
 ### Naming
 
-All notebooks follow the pattern `NN_descriptive_name.ipynb` where `NN` is a two-digit number indicating logical order. This makes the exploration narrative clear to anyone browsing the project and establishes a natural reading order.
+Notebooks follow `NN-initials-topic.ipynb` — for example `01-abc-explore-dataset.ipynb`. `NN` gives a reading order, the initials say who owns the file so parallel work does not collide, and the topic is lowercase and hyphenated. Numbers are a reading order, not a dependency chain: a notebook that only runs after another has been executed is a bug, so load from `data/processed/` instead.
 
 ### Standard Header
 
-Every notebook begins with a markdown cell containing the title, purpose (one to two sentences explaining what this notebook investigates), author, date, and a list of key findings or conclusions (filled in after the analysis is complete).
+Every notebook begins with a markdown cell containing the title, the **question** it is trying to answer, the author, the status, and a **findings** section filled in once the analysis is complete.
 
 ### Cell Organization
 
-Notebooks should follow this cell structure: (1) header and purpose, (2) imports and configuration, (3) data loading, (4) analysis sections with markdown headers, (5) conclusions and next steps. Keep individual cells focused on a single operation. Avoid cells longer than 30 lines.
+Notebooks follow this structure: (1) header and question, (2) setup — imports and project style, (3) configuration — one validated `ExperimentConfig`, (4) load via a helper in `src/`, (5) analysis sections under markdown headers, (6) conclusions and next steps. Keep cells under roughly 30 lines; a long cell is usually a function that has not been moved to `src/` yet.
 
 ### Output Policy
 
-Commit notebooks with outputs cleared to keep the repository lean and avoid merge conflicts on binary cell outputs. The `.pre-commit-config.yaml` includes a hook that strips outputs automatically. When specific outputs must be preserved for documentation, save them as standalone files in `outputs/figures/` and reference them from the notebook.
+Commit notebooks with outputs cleared. The `nbstripout` hook in `.pre-commit-config.yaml` does this automatically on every commit. Outputs worth preserving are saved as real files under `outputs/figures/` via `viz.save_figure(fig, cfg.figure_path("overview"))` and referenced from the notebook.
+
+### Importing from `src/`
+
+`whet init` substitutes `${...}` variables in text files, but `.ipynb` files are copied byte-for-byte by the scaffold engine — so the shipped notebooks cannot hard-code the generated package name. Their setup cell resolves it from the source tree instead:
+
+```python
+PACKAGE = next(p.name for p in sorted(SRC.iterdir()) if (p / "__init__.py").is_file())
+config_mod = import_module(f"{PACKAGE}.config")
+```
+
+In notebooks you write yourself, replace that with a plain `from your_package import ...`.
 
 ## Configuration Variables
 
+These are the only variables the scaffold engine substitutes.
+
 | Variable | Description | Default |
 |---|---|---|
-| `{{project_name}}` | Human-readable project name | Required |
-| `{{project_slug}}` | Directory name | Auto-generated |
-| `{{package_name}}` | Python import name for utilities | Auto-generated |
-| `{{author_name}}` | Researcher name | Required |
-| `{{email}}` | Researcher email | Required |
-| `{{description}}` | Research question or objective | Required |
-| `{{python_version}}` | Python version | 3.11 |
+| `${project_name}` | Human-readable project name | Required |
+| `${project_slug}` | Directory and distribution name | Derived from `project_name` |
+| `${package_name}` | Python import name for the `src/` package | Derived from `project_slug` |
+| `${description}` | Research question or objective | Empty |
+| `${author}` | Researcher name | Empty |
+| `${python_version}` | Minimum Python version | 3.11 |
 
 ## Dependencies
 
+Deliberately light — the archetype must install and test without a GPU.
+
 ```toml
-[dependencies]
-python = ">=3.11"
-jupyterlab = ">=4.0"
-ipywidgets = ">=8.0"
+# pyproject.toml [project].dependencies
+numpy      = ">=1.26"
 matplotlib = ">=3.8"
-seaborn = ">=0.13"
-pandas = ">=2.1"
-numpy = ">=1.26"
-pytorch = ">=2.0"
-torchvision = ">=0.16"
-albumentations = ">=1.3"
-pillow = ">=10.0"
-scikit-learn = ">=1.3"
+pydantic   = ">=2.6"
+loguru     = ">=0.7"
+
+# [project.optional-dependencies].notebook
+jupyterlab = ">=4.0"
+ipykernel  = ">=6.29"
+ipywidgets = ">=8.1"
+nbstripout = ">=0.7"
+
+# [project.optional-dependencies].dev
+pytest, pytest-cov, ruff, mypy, pre-commit
+```
+
+Add anything else with pixi:
+
+```bash
+pixi add scikit-learn pandas seaborn   # conda-forge
+pixi add --pypi some-package           # PyPI only
 ```
 
 ## Usage
@@ -129,82 +148,86 @@ scikit-learn = ">=1.3"
 ### Getting Started
 
 ```bash
-# Install dependencies
 pixi install
-
-# Download or prepare data
-pixi run python scripts/setup_data.py
-
-# Launch JupyterLab
-pixi run jupyter lab
+pixi run hooks        # install pre-commit, including nbstripout
+pixi run lab          # launch JupyterLab in notebooks/
 ```
 
 ### Working with Notebooks
 
 ```bash
-# Start with data exploration
-# Open notebooks/01_data_exploration.ipynb in JupyterLab
+# Start from the worked example
+#   notebooks/01-abc-explore-dataset.ipynb
 
 # Create a new notebook from the template
-cp notebooks/_template.ipynb notebooks/05_new_experiment.ipynb
+cp notebooks/_template.ipynb notebooks/02-abc-augmentation-sweep.ipynb
 
-# Run all notebooks non-interactively for validation
-pixi run jupyter nbconvert --execute notebooks/01_data_exploration.ipynb
+# Validate a notebook non-interactively (proves it still runs top to bottom)
+pixi run nbrun
+
+# Strip outputs manually if you are not using the hooks
+pixi run nbstrip
 ```
 
-### Using Utility Modules
+### Quality Gate
 
-```python
-# Inside any notebook
-from {{package_name}}.config import PATHS
-from {{package_name}}.plotting import plot_class_distribution, plot_sample_grid
-from {{package_name}}.data_utils import load_dataset, create_splits
-
-# Load data using centralized paths
-dataset = load_dataset(PATHS.raw / "images", PATHS.raw / "labels.csv")
-
-# Generate standard visualizations
-plot_class_distribution(dataset.labels, save_path=PATHS.figures / "class_dist.png")
-plot_sample_grid(dataset, n=16, save_path=PATHS.figures / "samples.png")
-```
-
-### Exporting to Scripts
+Tool-agnostic commands, runnable in any environment that has the deps:
 
 ```bash
-# Convert a notebook to a standalone Python script
-pixi run python scripts/export_notebook.py notebooks/03_baseline_model.ipynb scripts/baseline.py
-
-# The exported script preserves code cells and converts markdown to comments
+pytest
+ruff check .
+ruff format --check .
+mypy src/ --strict
 ```
 
-## Integration with Experiment Tracking
+Or via pixi, which supplies the environment:
 
-The archetype includes an optional experiment tracking notebook (`04_experiment_tracking.ipynb`) that demonstrates integration with common tracking platforms. To enable tracking in other notebooks, use the utility functions provided.
+```bash
+pixi run quality      # lint + format-check + typecheck + test
+```
+
+### Using the Utility Modules
 
 ```python
-# Lightweight tracking with local JSON logs
-from {{package_name}}.eval_utils import log_experiment
+# Inside any notebook, after the setup cell
+cfg = config_mod.ExperimentConfig(name="explore-dataset", seed=42, n_samples=600)
+cfg.log_summary()
 
-results = {"accuracy": 0.94, "f1": 0.91, "model": "resnet50", "epochs": 10}
-log_experiment("experiment_001", results, save_dir=PATHS.reports)
+features, labels = data_mod.make_synthetic_dataset(
+    n_samples=cfg.n_samples, n_classes=cfg.n_classes, seed=cfg.seed
+)
+train_idx, val_idx, test_idx = data_mod.split_indices(
+    cfg.n_samples, cfg.train_fraction, cfg.val_fraction, seed=cfg.seed
+)
+
+viz_mod.plot_class_distribution(labels)
+viz_mod.save_figure(fig, cfg.figure_path("overview"))   # -> outputs/figures/
 ```
 
-For production-grade tracking, the archetype integrates with Weights and Biases, MLflow, or TensorBoard through optional dependencies that can be added to `pixi.toml`.
+Ablations derive from the base config rather than mutating it:
+
+```python
+ablation = cfg.variant(seed=7, stage="ablation")   # validated copy
+```
 
 ## Customization Guide
 
 ### Adding New Utility Modules
 
-Place reusable functions in `src/{{package_name}}/` rather than duplicating them across notebooks. Common additions include custom augmentation pipelines, domain-specific evaluation metrics, and specialized data parsers. Every utility module should have corresponding tests in `tests/`.
+Place reusable functions in `src/<package_name>/` rather than duplicating them across notebooks. Common additions include dataset loaders, custom augmentation pipelines, domain-specific evaluation metrics, and specialized parsers. Every utility module gets corresponding tests in `tests/` — if a helper is too tangled to test, it is too tangled to trust inside a notebook.
+
+### Replacing the Synthetic Data
+
+`data.make_synthetic_dataset` exists so the example notebook runs on a fresh clone with no download. Replace it with a real loader that reads from `PATHS.raw`, keep the same return signature, and the notebook and its tests keep working.
 
 ### Graduating to a Training Project
 
-When an experiment proves successful and needs to scale, use the PyTorch Training Project archetype to create a production training codebase. Copy the validated model architecture from the notebook utility modules, translate Hydra configs from the notebook parameters, and set up proper data loading with the LightningDataModule pattern.
+When an experiment proves successful and needs to scale, use the PyTorch Training Project archetype to create a production training codebase. Move the validated helpers out of `src/<package_name>/`, translate `ExperimentConfig` fields into Hydra configs, and set up proper data loading with the LightningDataModule pattern. Leave the notebook behind as the record of *why*.
 
 ### Managing Large Data
 
-For datasets too large for the repository, keep the data in object storage and commit only a lightweight, versioned manifest that records each file's path and content hash. Update `scripts/setup_data.py` to read that manifest and fetch the referenced files into `data/`.
+`data/` and `outputs/` are git-ignored except for their `.gitkeep` markers. For datasets too large for the repository, keep the data in object storage and commit a lightweight, versioned manifest recording each file's path and content hash; fetch from that manifest into `data/raw/`.
 
 ### Custom Plotting Styles
 
-Edit `src/{{package_name}}/plotting.py` to define a consistent visual style across all notebooks. Set matplotlib rcParams, define a project color palette, and create template functions for common plot types (confusion matrices, ROC curves, training loss curves) that produce publication-ready figures.
+Edit `FIGURE_STYLE` in `src/<package_name>/viz.py` to define a consistent visual identity across the project, and call `viz.use_project_style()` once in each notebook's setup cell. Add template functions for common plot types (confusion matrices, ROC curves, training loss curves) alongside the existing helpers so every figure in the project looks the same without per-plot fiddling.

@@ -135,9 +135,10 @@ that are real but outside the flagship path, so they don't dilute the default tr
 ## Companion skills (not shipped by whet)
 
 whet does not ship a general product-UI ruleset — `gradio` covers ML demos only. For
-application/dashboard UI work, use the external **`interface-design`** skill alongside whet.
-If its `references/` directory is missing from your install, its "Deep dives" links will not
-resolve — reinstall it with the reference files present.
+application/dashboard UI work, use the external **`interface-design`** skill alongside whet
+(upstream: https://github.com/Dammyjay93/interface-design). Its `SKILL.md` is self-contained;
+`references/` only holds design-system templates. It also provides `/design-review` and
+`/design-deslop`.
 
 ## How to Add a New Archetype
 

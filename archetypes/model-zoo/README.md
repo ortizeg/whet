@@ -1,338 +1,206 @@
 # Model Zoo Archetype
 
-A structured project template for managing, benchmarking, and serving collections of pretrained computer vision models. This archetype provides a unified registry for organizing multiple model architectures, a benchmark suite for systematic performance comparison, download and caching utilities for weight management, and export tools for deploying models across inference frameworks.
+A project template for curating a collection of pretrained computer vision models. Every model is described by a version-controlled YAML **model card**, its weights are fetched only after their **SHA-256 digest is verified**, and any callable can be measured with a small **latency/throughput benchmark harness**.
 
 ## Purpose
 
-As ML teams mature, they accumulate a growing collection of pretrained models: baseline classifiers, fine-tuned detectors, experimental architectures, and production-deployed models. Without a structured system, these models exist as scattered checkpoint files on shared drives, unnamed weights in experiment tracking platforms, and undocumented artifacts on team members' local machines. Critical information such as training data provenance, hyperparameters, input specifications, and benchmark results is lost or scattered across Slack messages and wiki pages.
+As ML teams mature, they accumulate a growing collection of pretrained models: baseline classifiers, fine-tuned detectors, experimental architectures, and production-deployed models. Without a structured system, these models exist as scattered checkpoint files on shared drives, unnamed weights in experiment tracking platforms, and undocumented artifacts on team members' local machines. Critical information such as training data provenance, input specifications, and benchmark results is lost or scattered across chat messages and wiki pages.
 
-The Model Zoo archetype solves this by providing a centralized, version-controlled registry where every model is documented with a standardized model card, associated with reproducible benchmark results, and accessible through a simple download-and-load API. The registry tracks model metadata, performance metrics, export formats, and lineage information in a structured format that is both machine-readable and human-browsable.
+The Model Zoo archetype solves this by providing a centralized, version-controlled registry where every model is documented with a standardized model card and its weights are only ever loaded after a checksum match. The registry lives in git, so model metadata reviews go through the same pull-request process as code.
 
-This archetype is not a training framework. It consumes trained checkpoints produced by training projects and packages them into a curated collection that the rest of the organization can discover, evaluate, and deploy with confidence.
+This archetype is not a training framework. It consumes trained checkpoints produced by training projects and packages them into a curated collection that the rest of the organization can discover and deploy with confidence.
 
-## Use Cases
+## What the template actually generates
 
-- **Model benchmarking** -- Run systematic comparisons of multiple architectures on standardized datasets with consistent evaluation protocols and hardware conditions.
-- **Ensemble inference** -- Load and combine predictions from multiple models with configurable weighting and fusion strategies.
-- **Model selection** -- Query the registry by task, performance threshold, latency budget, or model size to find the best model for a given deployment constraint.
-- **Architecture exploration** -- Evaluate a new architecture against established baselines with a single command.
-- **Model versioning** -- Track model iterations over time with clear version semantics, deprecation notices, and migration guides.
-- **Export and deployment** -- Convert models from PyTorch to ONNX, TorchScript, or TensorRT for deployment across different inference platforms.
-- **Model auditing** -- Maintain a complete record of each model's training provenance, data dependencies, and evaluation history for compliance and reproducibility.
-
-## Directory Structure
+The core is **pure Python** — Pydantic V2, PyYAML, Loguru, and httpx. PyTorch is an optional extra, so a freshly generated project's tests pass on any machine, with or without a GPU.
 
 ```
-{{project_slug}}/
-├── .github/
-│   └── workflows/
-│       ├── benchmark.yml              # Scheduled benchmark runs
-│       ├── test.yml                   # Registry and loader tests
-│       └── code-review.yml           # Automated code review
+${project_slug}/
 ├── .gitignore
-├── .pre-commit-config.yaml
-├── pixi.toml
-├── pyproject.toml
 ├── README.md
-├── registry/                          # Model registry (version controlled)
-│   ├── index.yaml                    # Master index of all models
-│   ├── classification/
-│   │   ├── resnet50/
-│   │   │   ├── model_card.yaml       # Model metadata and documentation
-│   │   │   ├── config.yaml           # Architecture config
-│   │   │   └── benchmarks.yaml       # Benchmark results
-│   │   └── efficientnet_b0/
-│   │       ├── model_card.yaml
-│   │       ├── config.yaml
-│   │       └── benchmarks.yaml
-│   ├── detection/
-│   │   └── yolov8/
-│   │       ├── model_card.yaml
-│   │       ├── config.yaml
-│   │       └── benchmarks.yaml
-│   └── segmentation/
-│       └── unet/
-│           ├── model_card.yaml
-│           ├── config.yaml
-│           └── benchmarks.yaml
-├── src/{{package_name}}/
-│   ├── __init__.py
-│   ├── py.typed
-│   ├── registry.py                    # Model registry and discovery
-│   ├── loader.py                      # Model loading and instantiation
-│   ├── downloader.py                  # Weight download and caching
-│   ├── config.py                      # Pydantic config models
-│   ├── models/
-│   │   ├── __init__.py
-│   │   ├── base.py                   # Abstract model interface
-│   │   ├── classification/
-│   │   │   ├── __init__.py
-│   │   │   ├── resnet.py
-│   │   │   └── efficientnet.py
-│   │   ├── detection/
-│   │   │   ├── __init__.py
-│   │   │   └── yolo.py
-│   │   └── segmentation/
-│   │       ├── __init__.py
-│   │       └── unet.py
-│   ├── benchmark/
-│   │   ├── __init__.py
-│   │   ├── runner.py                 # Benchmark orchestrator
-│   │   ├── metrics.py                # Standardized evaluation metrics
-│   │   ├── datasets.py               # Benchmark dataset loaders
-│   │   └── report.py                 # Benchmark report generation
-│   ├── export/
-│   │   ├── __init__.py
-│   │   ├── onnx.py                   # ONNX export
-│   │   ├── torchscript.py           # TorchScript export
-│   │   └── tensorrt.py              # TensorRT export (optional)
-│   └── utils/
-│       ├── __init__.py
-│       ├── cache.py                  # Local cache management
-│       ├── hashing.py               # Weight file verification
-│       └── io.py                     # File I/O helpers
-├── cache/                             # Local weight cache (gitignored)
-│   └── .gitkeep
-├── scripts/
-│   ├── benchmark_all.py              # Run all benchmarks
-│   ├── benchmark_model.py            # Benchmark a single model
-│   ├── add_model.py                  # Interactive model registration
-│   ├── export_model.py               # Export model to target format
-│   └── download_weights.py           # Download model weights
-├── benchmarks/
-│   ├── results/                      # Benchmark result storage
-│   │   └── .gitkeep
-│   └── configs/
-│       ├── imagenet_val.yaml         # ImageNet validation benchmark
-│       ├── coco_val.yaml             # COCO validation benchmark
-│       └── latency.yaml             # Latency benchmark config
-├── tests/
-│   ├── __init__.py
-│   ├── conftest.py
-│   ├── test_registry.py
-│   ├── test_loader.py
-│   ├── test_downloader.py
-│   ├── test_export.py
-│   └── test_benchmark.py
-└── docs/
-    ├── model_card_template.md        # Template for new model cards
-    └── contributing.md               # Guide for adding new models
+├── pixi.toml                       # Canonical environment + tasks
+├── pyproject.toml                  # Metadata, deps, ruff / mypy / pytest config
+├── registry/                       # Model cards (version controlled)
+│   ├── resnet50.yaml               # Example: classification
+│   └── yolov8n.yaml                # Example: detection
+├── src/${package_name}/
+│   ├── __init__.py                 # Public API re-exports
+│   ├── __main__.py                 # CLI: list / show / download / verify
+│   ├── model_card.py               # Pydantic V2 model-card schema
+│   ├── registry.py                 # Load, validate, and query model cards
+│   ├── download.py                 # SHA-256-verified download + local cache
+│   ├── benchmark.py                # Latency / throughput harness
+│   └── py.typed
+└── tests/
+    ├── __init__.py
+    ├── conftest.py                 # Offline fixtures (file:// weights)
+    ├── test_model_card.py          # Schema accepts good cards, rejects bad ones
+    ├── test_registry.py            # Loading, lookup, versioning, filtering
+    ├── test_download.py            # Checksum verification, including rejection
+    ├── test_benchmark.py           # Harness works on any callable
+    └── test_cli.py                 # Exit codes for each subcommand
 ```
 
 ## Key Features
 
-- **Centralized model registry** with YAML-based model cards containing architecture, training provenance, input specifications, and performance metrics.
-- **Version-controlled metadata** where all model documentation and benchmark results live in git, providing a complete audit trail.
-- **Download and caching** utilities that fetch weights from remote storage (S3, GCS, HuggingFace Hub, HTTP URLs) with SHA256 verification and local caching.
-- **Benchmark suite** with standardized evaluation protocols, dataset loaders, and automated report generation for fair model comparisons.
-- **Multi-format export** to ONNX, TorchScript, and TensorRT with input/output shape validation and accuracy verification post-export.
-- **Model discovery API** for querying the registry by task, performance, size, or custom metadata fields.
-- **Weight integrity verification** through SHA256 checksums recorded in model cards and verified at download time.
+- **Strict model-card schema** — Pydantic V2 with `extra="forbid"` and `frozen=True`, so a typo in a YAML card fails at load time with the offending path, not at inference time.
+- **SHA-256-verified downloads** — weights are streamed to a `.part` file, hashed as they arrive, and only promoted into the cache on a digest match. A mismatch raises `ChecksumMismatchError` and leaves nothing behind.
+- **Injectable fetchers** — the fetcher is a `Protocol`, and `file://` URLs are supported alongside `http(s)://`, so the whole download path is testable with no network access.
+- **Self-healing cache** — a cached file is re-hashed on every access; a corrupt entry is transparently re-downloaded.
+- **Version-aware lookup** — `registry.get("resnet50")` returns the highest version; `registry.get("resnet50", "1.0.0")` pins one.
+- **Registry queries** — filter by task, tag, status, or a metric threshold.
+- **Framework-agnostic benchmarking** — `run_benchmark` times any zero-argument callable, so the same harness measures a torch module, an ONNX Runtime session, or a stub.
+- **CLI** — `python -m ${package_name} list | show | download | verify`, all output through Loguru.
 
 ## Model Card Schema
 
-Every model in the registry has a `model_card.yaml` that follows a standardized schema.
+One YAML file per model under `registry/`, validated by `${package_name}.model_card.ModelCard`.
 
 ```yaml
-name: "ResNet-50"
-version: "1.0.0"
-task: "classification"
-framework: "pytorch"
-description: "ResNet-50 trained on ImageNet-1K with standard augmentation."
+name: resnet50                  # lowercase registry key
+version: "1.0.0"                # dotted numeric version
+task: classification            # classification | detection | segmentation | keypoint | embedding
+architecture: resnet50
+description: >-
+  ResNet-50 image classifier trained on ImageNet-1K.
+license: Apache-2.0             # SPDX identifier
+training_dataset: ImageNet-1K
+num_parameters: 25557032
 
-architecture:
-  backbone: "resnet50"
-  num_parameters: 25557032
-  input_size: [3, 224, 224]
-  input_dtype: "float32"
-  input_normalization:
-    mean: [0.485, 0.456, 0.406]
-    std: [0.229, 0.224, 0.225]
-
-training:
-  dataset: "ImageNet-1K"
-  dataset_size: 1281167
-  epochs: 90
-  optimizer: "SGD"
-  learning_rate: 0.1
-  batch_size: 256
-  hardware: "8x NVIDIA A100"
-  training_time_hours: 24
+inputs:
+  channels: 3
+  height: 224
+  width: 224
+  dtype: float32                # float32 | uint8
+  mean: [0.485, 0.456, 0.406]   # length must equal `channels`
+  std: [0.229, 0.224, 0.225]    # non-zero
 
 weights:
-  url: "https://storage.example.com/models/resnet50_v1.0.0.pth"
-  sha256: "a1b2c3d4e5f6..."
-  size_mb: 97.8
-  format: "pytorch_state_dict"
+  url: https://models.example.com/resnet50/v1.0.0/resnet50-v1.pth   # http(s):// or file://
+  sha256: 3d05ac90a44862815a5c0fae3a4e1ee3b8e8e29bcb5c8c06459c6e865b342235
+  size_bytes: 102530333
+  weight_format: pytorch_state_dict   # pytorch_state_dict | torchscript | onnx | safetensors
 
-performance:
-  imagenet_val:
-    top1_accuracy: 0.7613
-    top5_accuracy: 0.9290
-    inference_latency_ms: 4.2
-    throughput_fps: 238.0
-    hardware: "NVIDIA A100"
-    batch_size: 1
+evaluations:                    # optional, repeatable
+  - dataset: ImageNet-1K
+    split: val
+    metrics:
+      top1_accuracy: 0.7613
+      top5_accuracy: 0.9290
+    hardware: NVIDIA A100 40GB
 
-exports:
-  onnx:
-    url: "https://storage.example.com/models/resnet50_v1.0.0.onnx"
-    sha256: "f6e5d4c3b2a1..."
-    opset_version: 17
-
-tags: ["imagenet", "classification", "baseline"]
-status: "active"  # active, deprecated, experimental
-deprecated_by: null
+tags: [imagenet, classification, baseline]
+status: active                  # active | experimental | deprecated
 ```
 
-## Configuration Variables
+The URLs and digests in the generated cards are placeholders. Replace them with your own artifacts and their real digests (`shasum -a 256 <file>`).
+
+## Template Variables
+
+`whet init` substitutes these into both file contents and file/directory names.
 
 | Variable | Description | Default |
 |---|---|---|
-| `{{project_name}}` | Human-readable zoo name | Required |
-| `{{project_slug}}` | Directory name | Auto-generated |
-| `{{package_name}}` | Python import name | Auto-generated |
-| `{{author_name}}` | Maintainer name | Required |
-| `{{email}}` | Maintainer email | Required |
-| `{{description}}` | Zoo description | Required |
-| `{{python_version}}` | Python version | 3.11 |
-| `{{weight_storage}}` | Remote storage backend (s3, gcs, http) | s3 |
-| `{{cache_dir}}` | Local weight cache directory | `~/.cache/{{package_name}}` |
+| `${project_name}` | Human-readable zoo name | Required |
+| `${project_slug}` | Directory and distribution name | Derived from `project_name` |
+| `${package_name}` | Python import name | Derived from `project_slug` |
+| `${description}` | One-line project description | Empty |
+| `${author}` | Maintainer name | Empty |
+| `${python_version}` | Minimum Python version | 3.11 |
+
+Runtime paths are configured with environment variables rather than template variables, so they can change without regenerating the project:
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `MODEL_REGISTRY_DIR` | Where model cards are discovered | `registry` |
+| `MODEL_WEIGHTS_CACHE` | Where verified weights are cached | `.cache/weights` |
 
 ## Dependencies
 
+Runtime (`[project].dependencies`):
+
 ```toml
-[dependencies]
-python = ">=3.11"
-torch = ">=2.0"
-torchvision = ">=0.16"
-onnx = ">=1.14"
-onnxruntime = ">=1.17"
-pydantic = ">=2.0"
+pydantic = ">=2.6"
 pyyaml = ">=6.0"
-rich = ">=13.0"
-requests = ">=2.31"
-tqdm = ">=4.66"
-pandas = ">=2.1"
+loguru = ">=0.7"
+httpx = ">=0.27"
 ```
+
+Dev extra: `pytest`, `pytest-cov`, `ruff`, `mypy`, `types-PyYAML`.
+Optional `torch` extra: `torch`, `torchvision` — only needed to benchmark real PyTorch models.
 
 ## Usage
 
-### Listing Available Models
+### Setup
 
 ```bash
-# List all models in the registry
-pixi run python -m {{package_name}} list
-
-# Filter by task
-pixi run python -m {{package_name}} list --task detection
-
-# Filter by performance threshold
-pixi run python -m {{package_name}} list --task classification --min-accuracy 0.80
+pixi install
+pixi add <package>          # conda-forge
+pixi add --pypi <package>   # PyPI-only
 ```
 
-### Loading a Model
+### Command line
+
+```bash
+python -m ${package_name} list
+python -m ${package_name} list --task detection
+python -m ${package_name} list --tag imagenet
+python -m ${package_name} show resnet50
+python -m ${package_name} download resnet50
+python -m ${package_name} verify resnet50 ./resnet50-v1.pth
+```
+
+`download` exits `2` and writes nothing to the cache when the digest does not match.
+
+### Python API
 
 ```python
-from {{package_name}} import load_model, list_models
+from loguru import logger
 
-# Discover available models
-models = list_models(task="classification")
-for m in models:
-    print(f"{m.name} v{m.version}: top1={m.performance.top1_accuracy:.3f}")
+from ${package_name} import download_weights, load_registry, run_benchmark
 
-# Load a model with pretrained weights (downloads and caches automatically)
-model = load_model("resnet50", pretrained=True)
-model.eval()
+registry = load_registry("registry")
 
-# Load a specific version
-model = load_model("resnet50", version="1.0.0", pretrained=True)
+for card in registry.select(task="classification", metric="top1_accuracy", min_value=0.75):
+    logger.info("{} top1={}", card.key, card.metric("top1_accuracy"))
 
-# Load without pretrained weights (architecture only)
-model = load_model("resnet50", pretrained=False, num_classes=10)
+card = registry.get("resnet50")          # highest version
+weights_path = download_weights(card)    # verified, cached, returns a Path
+
+result = run_benchmark(lambda: session.run(None, feeds), name=card.key)
+logger.info(result.summary())
 ```
 
-### Running Benchmarks
+### Quality gates
 
 ```bash
-# Benchmark all models on ImageNet validation
-pixi run python scripts/benchmark_all.py --config benchmarks/configs/imagenet_val.yaml
-
-# Benchmark a single model
-pixi run python scripts/benchmark_model.py --model resnet50 --config benchmarks/configs/imagenet_val.yaml
-
-# Run latency benchmarks
-pixi run python scripts/benchmark_model.py --model resnet50 --config benchmarks/configs/latency.yaml
-
-# Generate a comparison report
-pixi run python -m {{package_name}}.benchmark.report --results benchmarks/results/ --output reports/comparison.html
+pytest
+ruff check .
+ruff format --check .
+mypy src/ --strict
 ```
 
-### Exporting Models
+Or `pixi run quality`, which chains all four.
 
-```bash
-# Export to ONNX
-pixi run python scripts/export_model.py --model resnet50 --format onnx --output exports/
+## Adding a Model
 
-# Export to TorchScript
-pixi run python scripts/export_model.py --model resnet50 --format torchscript --output exports/
+1. Upload the weight file somewhere reachable over HTTPS.
+2. Compute its digest: `shasum -a 256 my-model.pth`.
+3. Copy `registry/resnet50.yaml` to `registry/<name>.yaml` and fill it in.
+4. Run `pytest` — the schema test validates every card in `registry/` automatically.
+5. Confirm the fetch path: `python -m ${package_name} download <name>`.
 
-# Export with accuracy verification
-pixi run python scripts/export_model.py --model resnet50 --format onnx --verify --num-samples 100
-```
+## Extension Points
 
-### Adding a New Model
+The generated project is a working core, deliberately small. Common next steps, none of which are scaffolded:
 
-```bash
-# Interactive model registration
-pixi run python scripts/add_model.py
+- **Model loading** — add a `loader.py` that maps `card.architecture` to a constructor and calls `download_weights` before `load_state_dict`. Keep it behind the optional `torch` extra so the core stays importable without a deep-learning stack.
+- **Export formats** — add ONNX / TorchScript / TensorRT export and record the resulting URL plus digest as a second `WeightsSpec` on the card.
+- **More storage backends** — `download.py` dispatches on URL scheme in `default_fetcher`; add `s3://` or `gs://` by extending it and adding the scheme to `SUPPORTED_SCHEMES` in `model_card.py`.
+- **Accuracy benchmarks** — `benchmark.py` measures latency only. Dataset-level metrics belong in a separate module; see the `model-evaluation` skill.
+- **CI** — a workflow that runs `pytest` on every PR keeps malformed model cards out of the registry. See the `github-actions` skill.
 
-# This will:
-# 1. Prompt for model metadata (name, task, architecture)
-# 2. Create the registry directory structure
-# 3. Generate a model_card.yaml template
-# 4. Run initial benchmarks if weights are available
-```
+## Related Skills
 
-## Customization Guide
-
-### Adding a New Model Architecture
-
-1. Implement the model class in `src/{{package_name}}/models/<task>/` inheriting from the base model interface.
-2. Create a registry directory under `registry/<task>/<model_name>/` with `model_card.yaml`, `config.yaml`, and `benchmarks.yaml`.
-3. Register the model in `registry/index.yaml`.
-4. Upload weights to the configured remote storage backend.
-5. Record the weight URL and SHA256 checksum in the model card.
-6. Run benchmarks and update `benchmarks.yaml` with results.
-
-### Adding a New Benchmark Dataset
-
-1. Create a dataset loader in `src/{{package_name}}/benchmark/datasets.py` that returns a standard `torch.utils.data.Dataset`.
-2. Create a benchmark configuration YAML in `benchmarks/configs/` specifying the dataset, metrics, and evaluation protocol.
-3. Add task-specific metrics to `src/{{package_name}}/benchmark/metrics.py` if needed.
-
-### Adding a New Export Format
-
-1. Create an export module in `src/{{package_name}}/export/` implementing the export interface.
-2. The export function should accept a loaded PyTorch model, example inputs, and output path.
-3. Include post-export verification that runs inference on sample inputs and compares outputs against the PyTorch reference.
-4. Add the export URL and checksum fields to the model card schema.
-
-### Custom Weight Storage Backends
-
-The `downloader.py` module supports pluggable storage backends. To add a new backend (e.g., Azure Blob Storage), implement the `StorageBackend` interface with `download(url, local_path)` and `exists(url)` methods, then register it in the backend factory. The default backends support S3 (via boto3), GCS (via google-cloud-storage), HuggingFace Hub, and plain HTTP/HTTPS URLs.
-
-### Cache Management
-
-The local weight cache stores downloaded model files in `{{cache_dir}}` organized by model name and version. Use the cache management utilities to inspect cache contents, calculate total size, and evict old versions. The cache respects SHA256 checksums: if a cached file does not match the expected checksum from the model card, it is re-downloaded automatically.
-
-```bash
-# Show cache contents and size
-pixi run python -m {{package_name}}.utils.cache info
-
-# Clear cache for a specific model
-pixi run python -m {{package_name}}.utils.cache clear --model resnet50
-
-# Clear entire cache
-pixi run python -m {{package_name}}.utils.cache clear --all
-```
+Required: `pydantic`, `loguru`, `testing`, `onnx`, `pytorch-lightning`.
+Recommended: `model-evaluation`, `wandb`, `docker-cv`.

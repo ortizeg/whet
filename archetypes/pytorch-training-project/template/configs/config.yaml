@@ -2,5 +2,6 @@ defaults:
   - model: default
   - data: default
   - trainer: default
+  - _self_
 
 seed: 42

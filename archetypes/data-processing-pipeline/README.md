@@ -1,245 +1,233 @@
 # Data Processing Pipeline Archetype
 
-A structured project template for building robust ETL (Extract, Transform, Load) workflows for machine learning datasets. This archetype provides a pipeline framework for cleaning, transforming, validating, augmenting, and splitting datasets with full traceability, parallel processing support, and integration with data versioning tools.
+A working project template for ETL workflows that turn raw CV/ML data into validated,
+leakage-free, versioned training splits. Generated projects run end to end on day one:
+`ingest -> validate -> split -> write`, with a content-hashed Parquet manifest, a data-quality
+gate, and a group-aware splitter that aborts the run if a group straddles two splits.
 
 ## Purpose
 
-Data preparation is the most time-consuming and error-prone phase of any machine learning project. Raw datasets arrive in inconsistent formats, contain corrupt files, have labeling errors, and require extensive transformation before they are suitable for training. Despite this, data processing code is often the least structured part of an ML codebase -- scattered across ad-hoc scripts, undocumented Jupyter cells, and bash one-liners that are impossible to reproduce.
+Data preparation is the most time-consuming and error-prone phase of any machine learning
+project. Raw datasets arrive in inconsistent formats, contain corrupt files, have labeling
+errors, and require extensive transformation before they are suitable for training. Despite
+this, data processing code is often the least structured part of an ML codebase -- scattered
+across ad-hoc scripts, undocumented Jupyter cells, and bash one-liners that are impossible to
+reproduce.
 
-The Data Processing Pipeline archetype solves this by providing a modular, testable, and reproducible framework for dataset preparation. Each processing step is implemented as an isolated stage with defined inputs, outputs, and validation criteria. Stages are composed into pipelines that can be executed end-to-end or incrementally, with each intermediate result cached and validated. The framework supports parallel processing for throughput-intensive operations and versions datasets by keeping the bulk data in object storage alongside a content-hashed manifest committed to the repository.
+This archetype gives that work a spine: each processing step is an ordinary, testable function
+with explicit inputs and outputs; every sample is content-hashed; every configuration value is
+validated by Pydantic at load time; and the highest-risk step -- splitting -- is protected by an
+assertion that runs inside the pipeline, not only in the test suite.
 
-The core design principle is that every transformation applied to data must be explicit, tested, logged, and reversible. This ensures that when model performance changes, the data lineage can be traced back to identify whether the change originated in the data pipeline or the model.
+The core design principle is that every transformation applied to data must be explicit, tested,
+logged, and reproducible. When model performance changes, the data lineage traces back to a
+dataset fingerprint, so you can tell whether the change came from the data or the model.
 
 ## Use Cases
 
-- **Dataset cleaning** -- Remove corrupt images, fix encoding issues, standardize file formats, and handle missing annotations.
-- **Annotation format conversion** -- Convert between COCO, VOC, YOLO, and custom annotation formats with validation.
-- **Image preprocessing** -- Resize, crop, normalize, and color-correct images to consistent specifications.
-- **Data augmentation** -- Generate augmented training samples with controlled augmentation policies and deduplication.
-- **Train/val/test splitting** -- Create reproducible dataset splits with stratification, group awareness, and cross-validation fold generation.
-- **Dataset merging** -- Combine multiple source datasets with label harmonization and conflict resolution.
-- **Quality assurance** -- Run automated checks for class balance, image quality, annotation consistency, and data leakage between splits.
-- **Feature extraction** -- Pre-compute embeddings, feature maps, or derived features and store them for efficient training.
+- **Train/val/test splitting** -- Reproducible splits that keep every frame of a clip, every
+  image of a patient, and every play of a match inside a single split.
+- **Dataset manifesting** -- Turn a directory tree into a validated, content-hashed Parquet
+  manifest with a stable fingerprint per dataset version.
+- **Quality assurance** -- Automated checks for empty datasets, corrupt/undersized files,
+  duplicate content, thin labels, mixed-label groups, and post-split label coverage.
+- **Dataset versioning** -- Bulk data stays in object storage; a small `dataset.json` card with
+  the fingerprint, counts, and split sizes is what gets committed.
+- **Dataset cleaning** -- Extend the ingest stage with format normalization and corrupt-file
+  removal; the quality gate already fails the run loudly.
+- **Annotation format conversion** -- Swap the reader in `stage_ingest`; everything downstream is
+  format-agnostic because it only sees `ImageRecord`s.
 
 ## Directory Structure
 
+The generated project (`whet init data-processing-pipeline`):
+
 ```
-{{project_slug}}/
-├── .github/
-│   └── workflows/
-│       ├── test.yml                    # Pipeline test suite
-│       └── code-review.yml            # Automated code review
+${project_slug}/
 ├── .gitignore
-├── .pre-commit-config.yaml
-├── pixi.toml
-├── pyproject.toml
 ├── README.md
-├── params.yaml                         # Pipeline parameters
+├── pixi.toml                            # environment + tasks
+├── pyproject.toml                       # packaging, ruff, mypy, pytest config
 ├── conf/
-│   ├── pipeline.yaml                  # Pipeline stage configuration
-│   ├── cleaning/
-│   │   └── default.yaml
-│   ├── splitting/
-│   │   └── default.yaml
-│   └── augmentation/
-│       └── default.yaml
-├── src/{{package_name}}/
-│   ├── __init__.py
+│   └── pipeline.toml                    # validated pipeline configuration
+├── src/${package_name}/
+│   ├── __init__.py                      # public API re-exports
 │   ├── py.typed
-│   ├── config.py                       # Pydantic pipeline config
-│   ├── pipeline.py                     # Pipeline orchestrator
-│   ├── stages/
-│   │   ├── __init__.py
-│   │   ├── base.py                    # Abstract stage interface
-│   │   ├── ingest.py                  # Data ingestion stage
-│   │   ├── validate.py               # Data validation stage
-│   │   ├── clean.py                   # Data cleaning stage
-│   │   ├── transform.py              # Transformation stage
-│   │   ├── augment.py                # Augmentation stage
-│   │   ├── split.py                  # Train/val/test splitting
-│   │   └── export.py                 # Output format export
-│   ├── validators/
-│   │   ├── __init__.py
-│   │   ├── image.py                   # Image integrity checks
-│   │   ├── annotation.py             # Annotation consistency checks
-│   │   └── schema.py                 # Data schema validation
-│   ├── io/
-│   │   ├── __init__.py
-│   │   ├── readers.py                # Format-specific readers
-│   │   ├── writers.py                # Format-specific writers
-│   │   └── formats.py                # Format definitions
-│   └── utils/
-│       ├── __init__.py
-│       ├── parallel.py               # Multiprocessing utilities
-│       ├── hashing.py                # Content hashing for dedup
-│       └── progress.py               # Progress bar helpers
-├── data/
-│   ├── raw/                           # Original source data
-│   │   └── .gitkeep
-│   ├── interim/                       # Intermediate stage outputs
-│   │   └── .gitkeep
-│   ├── processed/                     # Final processed dataset
-│   │   └── .gitkeep
-│   └── external/                      # Third-party reference data
-│       └── .gitkeep
-├── scripts/
-│   ├── run_pipeline.py               # Full pipeline execution
-│   ├── run_stage.py                  # Single stage execution
-│   └── validate_dataset.py           # Standalone validation
-├── reports/
-│   ├── .gitkeep
-│   └── templates/
-│       └── data_report.html          # Dataset report template
-├── tests/
-│   ├── __init__.py
-│   ├── conftest.py
-│   ├── test_stages.py
-│   ├── test_validators.py
-│   ├── test_io.py
-│   └── fixtures/
-│       └── sample_data/
-│           └── .gitkeep
-└── notebooks/
-    └── data_exploration.ipynb         # Interactive data inspection
+│   ├── config.py                        # frozen Pydantic V2 config models
+│   ├── manifest.py                      # ImageRecord, hashing, Parquet manifest, dataset card
+│   ├── splitting.py                     # group-aware, leakage-free splitting
+│   ├── quality.py                       # data-quality gate (ERROR aborts the run)
+│   ├── stages.py                        # ingest / validate / split / write
+│   ├── pipeline.py                      # orchestration + PipelineResult
+│   ├── sample_data.py                   # stdlib-only synthetic dataset generator
+│   ├── cli.py                           # argparse entry point
+│   └── __main__.py                      # python -m ${package_name}
+└── tests/
+    ├── __init__.py
+    ├── conftest.py                      # synthetic manifests + synthetic raw tree
+    ├── test_splitting.py                # split disjointness, determinism, leak detection
+    ├── test_manifest.py                 # schema, hashing, Parquet round-trip
+    ├── test_quality.py                  # every quality check
+    └── test_pipeline.py                 # end-to-end pipeline and CLI
 ```
+
+`data/` is created on demand at runtime and is Git-ignored, except
+`data/processed/dataset.json`.
 
 ## Key Features
 
-- **Modular stage architecture** where each processing step is an isolated, testable unit with defined inputs, outputs, and validation criteria.
-- **Pipeline orchestration** that composes stages into reproducible end-to-end workflows with dependency resolution and caching.
-- **Pydantic validation** at every stage boundary to catch data quality issues early and provide clear error messages.
-- **Parallel processing** with configurable worker pools for CPU-bound operations like image resizing and augmentation.
-- **Progress tracking** with rich progress bars showing per-stage and overall pipeline completion.
-- **Content hashing** for deduplication and change detection, enabling incremental processing of modified files only.
-- **Dataset versioning** through content-hashed manifests kept in Git while the bulk data lives in object storage, so pipeline runs reproduce with exact data lineage.
-- **HTML reports** generated after each pipeline run summarizing dataset statistics, quality metrics, and processing logs.
+- **Group-aware splitting** -- splits on the grouping key (clip, patient, match, session), never
+  on the row, and calls `assert_no_group_leakage` inside the pipeline so a leak aborts the run.
+- **Deterministic without an RNG** -- group order comes from a seeded SHA-256 ranking, so splits
+  reproduce across machines, Python versions, and library upgrades.
+- **Content hashing** -- SHA-256 per sample for deduplication and corruption detection, plus an
+  order-independent dataset fingerprint.
+- **Pydantic V2 validation** -- frozen config models; ratios that do not sum to 1.0 fail at load
+  time, not three hours in.
+- **Quality gate with severities** -- `ERROR` aborts, `WARNING` logs; checks run after ingest
+  *and* after splitting, because a healthy manifest still yields bad splits with bad ratios.
+- **Parquet everywhere** -- zstd-compressed manifest and per-split manifests; never CSV.
+- **Loguru structured logging** -- realized per-split record/group/label counts at every stage
+  boundary, so skewed ratios are visible immediately.
+- **Runnable on day one** -- a stdlib-only generator writes a synthetic clip-structured dataset
+  of real PNGs, so `sample -> run` works before you have any data.
 
-## Pipeline Stage Interface
+## Pipeline Stages
 
-Every stage implements a common interface defined in `stages/base.py`.
+Stages are plain functions, not a class hierarchy -- add one by writing a function and calling it
+from `run_pipeline`.
 
 ```python
-from abc import ABC, abstractmethod
-from pydantic import BaseModel
-
-class StageConfig(BaseModel):
-    """Configuration for a pipeline stage."""
-    enabled: bool = True
-    num_workers: int = 4
-
-class PipelineStage(ABC):
-    """Abstract base class for all pipeline stages."""
-
-    @abstractmethod
-    def run(self, input_path: Path, output_path: Path, config: StageConfig) -> StageResult:
-        """Execute the stage, reading from input_path and writing to output_path."""
-        ...
-
-    @abstractmethod
-    def validate_input(self, input_path: Path) -> ValidationResult:
-        """Validate that input data meets this stage's requirements."""
-        ...
-
-    @abstractmethod
-    def validate_output(self, output_path: Path) -> ValidationResult:
-        """Validate that output data meets expected quality criteria."""
-        ...
+def stage_ingest(config: IngestConfig) -> pl.DataFrame: ...
+def stage_validate(manifest: pl.DataFrame, config: QualityConfig) -> QualityReport: ...
+def stage_split(manifest: pl.DataFrame, config: SplitConfig) -> dict[str, pl.DataFrame]: ...
+def stage_write(
+    manifest: pl.DataFrame,
+    splits: Mapping[str, pl.DataFrame],
+    config: OutputConfig,
+    quality: QualityConfig,
+) -> dict[str, Path]: ...
 ```
 
-## Configuration Variables
+The leakage guard, which runs in the pipeline and not only in tests:
+
+```python
+def assert_no_group_leakage(splits: Mapping[str, pl.DataFrame], group_column: str) -> None:
+    """Raise DataLeakageError if any group appears in more than one split."""
+```
+
+## Expected Raw Layout
+
+```
+data/raw/<label>/<group_id>/<file>.png
+data/raw/goal/match_0007/frame_000123.png
+```
+
+The middle directory is the grouping key. Adjust `ingest.label_depth` / `ingest.group_depth` in
+`conf/pipeline.toml` for a different tree.
+
+## Template Variables
 
 | Variable | Description | Default |
 |---|---|---|
-| `{{project_name}}` | Human-readable project name | Required |
-| `{{project_slug}}` | Directory name | Auto-generated |
-| `{{package_name}}` | Python import name | Auto-generated |
-| `{{author_name}}` | Author name | Required |
-| `{{email}}` | Author email | Required |
-| `{{description}}` | Pipeline purpose description | Required |
-| `{{python_version}}` | Python version | 3.11 |
-| `{{input_format}}` | Source data format (coco, voc, yolo, custom) | coco |
-| `{{output_format}}` | Target data format | coco |
+| `${project_name}` | Human-readable project name | Required |
+| `${project_slug}` | Directory / distribution name | Derived from project name |
+| `${package_name}` | Python import name | Derived from slug |
+| `${description}` | Pipeline purpose description | Empty |
+| `${author}` | Author name | Empty |
+| `${python_version}` | Minimum Python version | 3.11 |
 
 ## Dependencies
+
+Deliberately light -- no torch, no GPU, no image-decoding dependency in the core path.
 
 ```toml
 [dependencies]
 python = ">=3.11"
-pydantic = ">=2.0"
-pyyaml = ">=6.0"
-pillow = ">=10.0"
-numpy = ">=1.26"
-pandas = ">=2.1"
-albumentations = ">=1.3"
-tqdm = ">=4.66"
-rich = ">=13.0"
-pyarrow = ">=14.0"
+pydantic = ">=2.6"
+loguru = ">=0.7"
+polars = ">=1.0"
+
+[feature.dev.dependencies]
+pytest = ">=7.4"
+pytest-cov = ">=4.1"
+ruff = ">=0.8"
+mypy = ">=1.11"
 ```
 
 ## Usage
 
-### Running the Full Pipeline
-
 ```bash
-# Install dependencies
 pixi install
 
-# Place raw data in data/raw/
-cp -r /path/to/source/dataset/* data/raw/
+# Generate a synthetic dataset to try the pipeline before you have data (optional)
+python -m ${package_name} sample --root data/raw
+
+# Scan the raw tree and report the manifest fingerprint
+python -m ${package_name} scan --config conf/pipeline.toml
+
+# Run the quality gate only (non-zero exit on failure)
+python -m ${package_name} validate --config conf/pipeline.toml
 
 # Run the full pipeline
-pixi run python scripts/run_pipeline.py
-
-# Run with custom configuration overrides
-pixi run python scripts/run_pipeline.py --config conf/pipeline.yaml \
-    --override splitting.test_ratio=0.15
+python -m ${package_name} run --config conf/pipeline.toml
 ```
 
-### Running Individual Stages
+Equivalent pixi tasks: `pixi run sample`, `pixi run scan`, `pixi run validate`, `pixi run run`.
+
+Outputs in `data/processed/`: `manifest.parquet`, `splits/{train,val,test}.parquet`, and
+`dataset.json` (fingerprint, counts, labels, split sizes).
+
+### Development
 
 ```bash
-# Run only the validation stage
-pixi run python scripts/run_stage.py validate --input data/raw/ --output reports/
-
-# Run only the cleaning stage
-pixi run python scripts/run_stage.py clean --input data/raw/ --output data/interim/cleaned/
-
-# Run only the splitting stage
-pixi run python scripts/run_stage.py split --input data/interim/cleaned/ --output data/processed/
+pytest
+ruff check .
+ruff format --check .
+mypy src/ --strict
 ```
 
-### Validation
-
-```bash
-# Validate a dataset independently
-pixi run python scripts/validate_dataset.py data/processed/ --format coco --report reports/validation.html
-
-# Check for data leakage between splits
-pixi run python scripts/validate_dataset.py data/processed/ --check-leakage
-```
+Or `pixi run quality` for all four.
 
 ## Customization Guide
 
-### Adding a New Pipeline Stage
+### Adding a Pipeline Stage
 
-1. Create a new class inheriting from `PipelineStage` in `src/{{package_name}}/stages/`.
-2. Implement `run()`, `validate_input()`, and `validate_output()` methods.
-3. Define a `StageConfig` subclass with Pydantic-validated parameters.
-4. Add the stage configuration to `conf/pipeline.yaml`.
-5. Register the stage in the pipeline orchestrator's stage registry.
-6. Write unit tests in `tests/test_stages.py` with fixture data.
+1. Write a function in `src/${package_name}/stages.py` with explicit inputs and outputs.
+2. Add its configuration as a frozen Pydantic model in `config.py` and hang it off
+   `PipelineConfig`.
+3. Call it from `run_pipeline` in `pipeline.py`.
+4. Add a test in `tests/`. There is no stage registry or abstract base class to update.
 
-### Adding a New Data Format
+### Adding a Quality Check
 
-1. Implement a reader in `src/{{package_name}}/io/readers.py` that parses the format into the internal representation.
-2. Implement a writer in `src/{{package_name}}/io/writers.py` that serializes the internal representation to the target format.
-3. Register the format in `src/{{package_name}}/io/formats.py`.
-4. Add validation rules in `src/{{package_name}}/validators/schema.py`.
+1. Write a `_check_*` function in `quality.py` returning a list of `QualityIssue`.
+2. Call it from `validate_manifest` (or `validate_splits` for post-split checks).
+3. Use `Severity.ERROR` to abort the run and `Severity.WARNING` to log and continue.
 
-### Parallel Processing Configuration
+### Adding a Source Format
 
-The `parallel.py` utility module provides a `parallel_map` function that distributes work across a configurable number of processes. Each stage can specify its own `num_workers` parameter. For I/O-bound stages (downloading, reading from network storage), use thread-based parallelism. For CPU-bound stages (image resizing, augmentation), use process-based parallelism. The default is process-based with `num_workers=4`.
+1. Write a reader that yields `ImageRecord`s (COCO, VOC, YOLO, a CSV of URLs, a database query).
+2. Swap it into `stage_ingest`. Splitting, validation, and writing are format-agnostic.
+3. If the reader needs new fields, add them to `ImageRecord` *and* `MANIFEST_SCHEMA`, bump
+   `SCHEMA_VERSION`, and write an explicit migration -- never mutate a schema silently.
 
-### Custom Validation Rules
+### Choosing the Grouping Key
 
-Add domain-specific validation rules in `src/{{package_name}}/validators/`. Common additions include minimum image resolution checks, aspect ratio constraints, bounding box sanity checks (non-zero area, within image bounds), and class label consistency verification. Each validator returns a structured `ValidationResult` with severity levels (error, warning, info) and per-sample details.
+`split.group_column` defaults to `group_id`. Point it at whatever makes samples correlated:
+video/clip ID, patient/subject ID, match/session ID, player identity, camera or site ID, or
+capture date for time-correlated data. Set it to `null` only when samples are genuinely
+independent -- the pipeline then falls back to a stratified split and logs a warning.
+
+### Scaling Up
+
+Ingest is a single-process directory walk, which is fine to tens of thousands of files. Beyond
+that, hash files in a `ProcessPoolExecutor` inside `stage_ingest`, and switch the manifest reads
+to `pl.scan_parquet` for lazy, out-of-core execution. The manifest, splitting, and quality code
+paths do not change.
+
+## Not Included
+
+Deliberately out of scope, to keep the generated project small and dependency-light -- add them
+as your project needs them: augmentation policies (Albumentations), HTML dataset reports,
+notebooks, DVC integration, and CI workflow files.

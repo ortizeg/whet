@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class HealthResponse(BaseModel, frozen=True):
@@ -10,6 +10,21 @@ class HealthResponse(BaseModel, frozen=True):
 
     status: str
     version: str
+
+
+class ReadinessResponse(BaseModel, frozen=True):
+    """Readiness probe response.
+
+    ``ready`` is ``False`` (and ``/ready`` answers 503) while no ONNX model is
+    loaded, which is the expected state of a freshly scaffolded project.
+    """
+
+    model_config = ConfigDict(frozen=True, protected_namespaces=())
+
+    ready: bool
+    model_name: str
+    model_path: str
+    providers: list[str] = Field(default_factory=list)
 
 
 class PredictionRequest(BaseModel, frozen=True):

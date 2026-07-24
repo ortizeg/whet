@@ -1,0 +1,46 @@
+# Model card — validated by ${package_name}.model_card.ModelCard.
+#
+# NOTE: the weights URL and sha256 below are PLACEHOLDERS. Replace them with
+# your own hosted artefact and its real digest:
+#     shasum -a 256 yolov8n-v1.onnx
+name: yolov8n
+version: "1.2.0"
+task: detection
+architecture: yolov8-nano
+description: >-
+  Nano-scale single-stage object detector exported to ONNX for CPU and edge
+  deployment.
+license: AGPL-3.0-only
+training_dataset: COCO 2017 train
+num_parameters: 3157200
+
+inputs:
+  channels: 3
+  height: 640
+  width: 640
+  dtype: float32
+  mean: [0.0, 0.0, 0.0]
+  std: [1.0, 1.0, 1.0]
+
+weights:
+  url: https://models.example.com/yolov8n/v1.2.0/yolov8n-v1.onnx
+  sha256: 4ee42e95ef9896222819e8a5ab0a814e5814455a323fb29086d1abee2ccba09c
+  size_bytes: 12812345
+  weight_format: onnx
+
+evaluations:
+  - dataset: COCO 2017
+    split: val
+    metrics:
+      map_50_95: 0.373
+      map_50: 0.525
+    hardware: NVIDIA T4
+  - dataset: COCO 2017
+    split: val
+    metrics:
+      latency_ms: 8.4
+      throughput_fps: 119.0
+    hardware: Intel Xeon 8-core (ONNX Runtime CPU)
+
+tags: [coco, detection, edge, onnx]
+status: active

@@ -1,0 +1,54 @@
+[project]
+name = "${project_slug}"
+version = "0.1.0"
+description = "${description}"
+authors = ["${author}"]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", "osx-64", "win-64"]
+
+[activation.env]
+# src-layout: make the package importable from notebooks without an editable install.
+PYTHONPATH = "src"
+# Headless-safe default; notebooks override it with the inline backend.
+MPLBACKEND = "Agg"
+
+[dependencies]
+python = ">=${python_version}"
+numpy = ">=1.26"
+matplotlib-base = ">=3.8"
+pydantic = ">=2.6"
+
+[pypi-dependencies]
+loguru = ">=0.7"
+
+[feature.notebook.dependencies]
+jupyterlab = ">=4.0"
+ipykernel = ">=6.29"
+ipywidgets = ">=8.1"
+nbstripout = ">=0.7"
+
+[feature.dev.dependencies]
+pytest = ">=7.4"
+pytest-cov = ">=4.1"
+ruff = ">=0.8"
+mypy = ">=1.11"
+pre-commit = ">=3.7"
+
+[environments]
+default = { features = ["notebook", "dev"], solve-group = "default" }
+
+[tasks]
+lab = "jupyter lab --notebook-dir=notebooks"
+notebook = "jupyter notebook --notebook-dir=notebooks"
+kernel = "python -m ipykernel install --user --name ${project_slug} --display-name '${project_name}'"
+# Strip outputs from every notebook — run before committing if hooks are not installed.
+nbstrip = "nbstripout notebooks/*.ipynb"
+# Non-interactive execution: proves the notebook still runs top to bottom.
+nbrun = "jupyter nbconvert --to notebook --execute --inplace notebooks/01-abc-explore-dataset.ipynb"
+test = "pytest"
+lint = "ruff check ."
+format = "ruff format ."
+format-check = "ruff format --check ."
+typecheck = "mypy src/ --strict"
+hooks = "pre-commit install"
+quality = { depends-on = ["lint", "format-check", "typecheck", "test"] }

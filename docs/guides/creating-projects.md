@@ -66,7 +66,7 @@ Claude generates the complete project structure:
 ```
 face-detection-system/
 ├── .github/workflows/
-│   ├── code-review.yml
+│   ├── ci.yml
 │   └── test.yml
 ├── .gitignore
 ├── .pre-commit-config.yaml

@@ -1,0 +1,4 @@
+num_classes: 10
+learning_rate: 0.0005
+backbone: resnet50
+pretrained: true
