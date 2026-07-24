@@ -1,6 +1,6 @@
 [project]
 name = "whet"
-version = "0.1.0"
+version = "0.3.0"
 description = "Sharpen your AI coder — install expert skills into AI coding agents"
 authors = [{name = "Enrique G. Ortiz", email = "ortizeg@gmail.com"}]
 readme = "README.md"
@@ -57,11 +57,17 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/whet"]
 
+# The skills, archetypes, and settings ARE the product; without this the wheel
+# ships only the CLI and `whet list` reports "No skills found".
+[tool.hatch.build.targets.wheel.force-include]
+"skills" = "whet/_data/skills"
+"archetypes" = "whet/_data/archetypes"
+"settings" = "whet/_data/settings"
+
 [tool.hatch.build.targets.sdist]
 include = [
     "src/whet/",
     "skills/",
-    "agents/",
     "archetypes/",
     "settings/",
 ]

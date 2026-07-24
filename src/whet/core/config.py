@@ -8,6 +8,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from whet.core.paths import bundled_dir
+
 CONFIG_PATH = Path.home() / ".config" / "whet" / "config.json"
 
 
@@ -51,10 +53,8 @@ class WhetConfig(BaseModel):
     """Whet configuration persisted to disk."""
 
     target: Platform = Platform.CLAUDE
-    skills_dir: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[3] / "skills")
-    archetypes_dir: Path = Field(
-        default_factory=lambda: Path(__file__).resolve().parents[3] / "archetypes"
-    )
+    skills_dir: Path = Field(default_factory=lambda: bundled_dir("skills"))
+    archetypes_dir: Path = Field(default_factory=lambda: bundled_dir("archetypes"))
 
     @classmethod
     def load(cls) -> WhetConfig:
