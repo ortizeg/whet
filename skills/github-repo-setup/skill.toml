@@ -2,6 +2,7 @@
 name = "github-repo-setup"
 version = "1.0.0"
 category = "infra"
+tier = "extra"
 tags = ["repository", "github", "setup", "initialization"]
 
 [dependencies]
