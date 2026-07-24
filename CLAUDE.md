@@ -106,6 +106,26 @@ Rules:
 The installer copies `references/` for directory-based platforms (Claude, Antigravity) and
 inlines them for flat-file platforms (Cursor, Copilot), so no content is lost either way.
 
+### Keeping an install in sync (`--prune`)
+
+`whet install` copies skills but does not remove ones that were deleted upstream, so a
+stale skill can linger in `.claude/skills/` long after it left the repo. `--prune` fixes
+that:
+
+```bash
+whet install --prune
+```
+
+Prune is **manifest-scoped**. Each install writes `.whet-manifest.json` into the target
+directory recording which skills whet owns there. Prune only ever removes names from that
+manifest, so skills installed by other tools (GSD, `interface-design`, hand-written ones)
+that share the same directory are never touched. A skill merely filtered out of a run
+(`--category`, or an `extra` skill without `--include-extras`) is not an orphan either —
+only skills that no longer exist in `skills/` are removed.
+
+Installs predating the manifest are invisible to prune; clear those once with
+`whet remove <name>`.
+
 ### Core vs extra tier
 
 `tier = "core"` (default) installs with `whet install`. `tier = "extra"` marks a skill as

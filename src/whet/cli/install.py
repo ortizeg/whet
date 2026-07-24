@@ -10,6 +10,7 @@ from rich.console import Console
 from whet.adapters.base import PlatformAdapter
 from whet.cli import app
 from whet.core.config import Platform, WhetConfig
+from whet.core.manifest import find_orphans, read_manifest, write_manifest
 from whet.core.skill import Skill
 from whet.registry.loader import discover_skills
 
@@ -24,6 +25,9 @@ def install(
     include_extras: bool = typer.Option(
         False, "--include-extras", help="Also install opt-in 'extra' tier skills."
     ),
+    prune: bool = typer.Option(
+        False, "--prune", help="Also remove whet-installed skills that no longer exist upstream."
+    ),
     with_settings: bool = typer.Option(
         False, "--with-settings", "-s", help="Also apply settings template."
     ),
@@ -36,7 +40,13 @@ def install(
     adapter = _get_adapter(cfg.target)
     paths = cfg.get_platform_paths()
 
-    all_skills = discover_skills(cfg.skills_dir)
+    source_skills = discover_skills(cfg.skills_dir)
+    # Every skill that still exists upstream, before any filtering. Prune compares
+    # against this so a skill merely skipped by --category/--include-extras is never
+    # mistaken for one that was deleted.
+    available = {s.name for s in source_skills}
+
+    all_skills = source_skills
     if category:
         all_skills = [s for s in all_skills if s.category == category]
 
@@ -55,12 +65,12 @@ def install(
         raise typer.Exit(code=1)
 
     if scope_global:
-        _install_to(adapter, all_skills, paths.global_dir, "global")
+        _install_to(adapter, all_skills, paths.global_dir, "global", available, prune)
         if with_settings:
             _apply_settings(cfg.target.value, "global")
 
     if scope_local:
-        _install_to(adapter, all_skills, paths.local_dir, "local")
+        _install_to(adapter, all_skills, paths.local_dir, "local", available, prune)
         if with_settings:
             _apply_settings(cfg.target.value, "local")
 
@@ -70,8 +80,10 @@ def _install_to(
     items: list[Skill],
     target_dir: Path,
     scope_label: str,
+    available: set[str],
+    prune: bool,
 ) -> None:
-    """Install skills to a target directory."""
+    """Install skills to a target directory, optionally pruning deleted ones."""
     console.print(f"\n[bold]Installing {len(items)} skills ({scope_label})...[/bold]")
 
     for item in items:
@@ -79,6 +91,27 @@ def _install_to(
         console.print(f"  [green]✓[/green] {item.name}")
 
     console.print(f"\n[bold green]✓ Installed {len(items)} skills to {target_dir}[/bold green]")
+
+    previously_installed = read_manifest(target_dir)
+    orphans = find_orphans(previously_installed, available)
+
+    if prune and orphans:
+        console.print(f"\n[bold]Pruning {len(orphans)} removed skills...[/bold]")
+        for name in orphans:
+            if adapter.remove_skill(name, target_dir):
+                console.print(f"  [yellow]−[/yellow] {name}")
+    elif orphans:
+        names = ", ".join(orphans)
+        console.print(
+            f"[dim]{len(orphans)} installed skills no longer exist upstream ({names}). "
+            f"Use --prune to remove them.[/dim]"
+        )
+
+    # Record ownership: everything whet has installed here, minus anything just pruned.
+    owned = set(previously_installed) | {item.name for item in items}
+    if prune:
+        owned -= set(orphans)
+    write_manifest(target_dir, sorted(owned))
 
 
 def _apply_settings(platform: str, scope: str) -> None:
