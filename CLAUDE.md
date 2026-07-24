@@ -106,6 +106,21 @@ Rules:
 The installer copies `references/` for directory-based platforms (Claude, Antigravity) and
 inlines them for flat-file platforms (Cursor, Copilot), so no content is lost either way.
 
+### Scaffolding a project (`whet init`)
+
+`whet init <archetype>` renders the template **and installs the archetype's required
+skills** into the new project, so it is usable immediately:
+
+```bash
+whet init pytorch-training-project
+whet init pytorch-training-project --with-recommended   # + recommended skills
+whet init pytorch-training-project --no-skills          # scaffold files only
+```
+
+An archetype's value over a plain folder copy is the skill set it composes, so leaving
+that as a printed hint made the `[skills]` list advisory. A name in `archetype.toml` that
+no longer resolves is reported rather than silently skipped.
+
 ### Keeping an install in sync (`--prune`)
 
 `whet install` copies skills but does not remove ones that were deleted upstream, so a

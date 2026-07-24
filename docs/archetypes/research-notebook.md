@@ -45,13 +45,13 @@ This archetype provides a structured notebook environment for ML research and ex
 
 ```bash
 # Start Jupyter
-uv run jupyter lab
+jupyter lab
 
 # Convert notebook to script
-uv run jupyter nbconvert --to script notebooks/01_data_exploration.ipynb
+jupyter nbconvert --to script notebooks/01_data_exploration.ipynb
 
 # Run all notebooks headless (for CI)
-uv run pytest --nbmake notebooks/
+pytest --nbmake notebooks/
 ```
 
 ## Customization

@@ -64,10 +64,10 @@ class Stage(ABC):
 
 ```bash
 # Run full pipeline
-uv run python -m my_project.pipeline
+python -m my_project.pipeline
 
 # Run single stage
-uv run python -m my_project.pipeline stage=preprocess
+python -m my_project.pipeline stage=preprocess
 ```
 
 ## Customization

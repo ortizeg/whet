@@ -31,8 +31,10 @@ whet install --global
 # Add specific skills to your project
 whet add pytorch-lightning wandb hydra-config
 
-# Scaffold a new project
+# Scaffold a new project (also installs the archetype's required skills)
 whet init pytorch-training-project
+whet init pytorch-training-project --with-recommended   # + recommended skills
+whet init pytorch-training-project --no-skills          # files only
 ```
 
 ## What is whet?

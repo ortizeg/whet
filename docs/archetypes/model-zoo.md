@@ -70,13 +70,13 @@ Each model includes a `MODEL_CARD.md` documenting:
 
 ```bash
 # Run benchmarks
-uv run python benchmarks/run_benchmarks.py
+python benchmarks/run_benchmarks.py
 
 # Download all model weights
-uv run python -m my_project.download --all
+python -m my_project.download --all
 
 # Compare models
-uv run python -m my_project.benchmark --models resnet50,efficientnet_b0
+python -m my_project.benchmark --models resnet50,efficientnet_b0
 ```
 
 ## Customization
