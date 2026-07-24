@@ -6,5 +6,5 @@ tags = ["data", "etl", "pipeline", "processing"]
 description = "ETL workflows for dataset processing and preparation"
 
 [skills]
-required = ["pydantic", "loguru", "testing"]
+required = ["data-pipelines", "pydantic", "loguru", "testing"]
 recommended = ["docker-cv", "gcp", "github-actions"]

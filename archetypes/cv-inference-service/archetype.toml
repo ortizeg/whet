@@ -6,5 +6,5 @@ tags = ["inference", "deployment", "fastapi", "onnx"]
 description = "FastAPI + ONNX deployment service for computer vision models"
 
 [skills]
-required = ["onnx", "pydantic", "loguru", "docker-cv", "testing"]
-recommended = ["tensorrt", "gcp", "github-actions"]
+required = ["fastapi", "onnx", "pydantic", "loguru", "docker-cv", "testing"]
+recommended = ["tensorrt", "model-evaluation", "gcp", "github-actions"]

@@ -7,4 +7,4 @@ description = "Collection of pretrained models with benchmarking and evaluation"
 
 [skills]
 required = ["pytorch-lightning", "onnx", "pydantic", "loguru", "testing"]
-recommended = ["wandb", "docker-cv"]
+recommended = ["wandb", "model-evaluation", "docker-cv"]
