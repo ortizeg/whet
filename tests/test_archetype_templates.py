@@ -218,3 +218,36 @@ def test_notebooks_are_substitutable() -> None:
     assert _is_text_file(Path("notebooks/01-explore.ipynb")), (
         ".ipynb must be substitutable; otherwise notebooks ship literal ${...} placeholders"
     )
+
+
+# Skills whose presence is implied by what every template ships. If a template
+# ships the artifact, the archetype must compose the skill that explains it —
+# otherwise a generated project uses a tool nothing taught the agent about.
+IMPLIED_BY_ARTIFACT = {
+    "pixi.toml": "pixi",
+    "tests": "testing",
+}
+
+
+@pytest.mark.parametrize("archetype", all_archetypes(), ids=lambda a: a.path.name)
+def test_composition_matches_what_template_ships(
+    archetype: Archetype, rendered: dict[str, Path]
+) -> None:
+    """An archetype must compose the skills its own template depends on."""
+    root = rendered[archetype.path.name]
+    required = set(archetype.skills.required)
+
+    for artifact, skill in IMPLIED_BY_ARTIFACT.items():
+        if (root / artifact).exists():
+            assert skill in required, (
+                f"{archetype.path.name} ships {artifact} but does not require the "
+                f"'{skill}' skill; a generated project would use a tool nothing explains"
+            )
+
+    # Every template configures ruff and mypy in its pyproject.
+    with open(root / "pyproject.toml", "rb") as f:
+        tools = tomllib.load(f).get("tool", {})
+    if "ruff" in tools or "mypy" in tools:
+        assert "code-quality" in required, (
+            f"{archetype.path.name} configures ruff/mypy but does not require 'code-quality'"
+        )
