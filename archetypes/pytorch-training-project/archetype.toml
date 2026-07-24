@@ -6,5 +6,5 @@ tags = ["training", "pytorch", "lightning", "deep-learning"]
 description = "Model training with PyTorch Lightning, Hydra config, and experiment tracking"
 
 [skills]
-required = ["pytorch-lightning", "hydra-config", "pydantic", "loguru", "testing"]
-recommended = ["wandb", "model-evaluation", "data-pipelines", "docker-cv", "github-actions"]
+required = ["pytorch-lightning", "hydra-config", "pydantic", "loguru", "testing", "code-quality", "pixi"]
+recommended = ["wandb", "model-evaluation", "data-pipelines", "onnx", "gcp", "docker-cv", "github-actions"]
