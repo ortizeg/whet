@@ -1,4 +1,4 @@
-# Pipeline configuration — validated by ${package_name}.config.PipelineConfig at load time.
+# Pipeline configuration, validated by PipelineConfig at load time.
 # Paths are relative to the directory you run the pipeline from (the project root).
 
 name = "${project_slug}"
