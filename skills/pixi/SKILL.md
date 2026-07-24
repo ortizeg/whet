@@ -19,12 +19,12 @@ and dependency manager — never conda, pip, or virtualenv directly.
 
 ## The manifest core
 
-A working `pixi.toml` needs a `[project]` block naming the channels and platforms, a
+A working `pixi.toml` needs a `[workspace]` block naming the channels and platforms, a
 `[dependencies]` block for conda packages, and (usually) `[pypi-dependencies]` and
 `[tasks]`.
 
 ```toml
-[project]
+[workspace]
 name = "my-cv-project"
 version = "0.1.0"
 description = "A computer vision project"
