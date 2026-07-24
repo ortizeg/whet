@@ -7,4 +7,4 @@ description = "Model training with PyTorch Lightning, Hydra config, and experime
 
 [skills]
 required = ["pytorch-lightning", "hydra-config", "pydantic", "loguru", "testing"]
-recommended = ["wandb", "docker-cv", "github-actions"]
+recommended = ["wandb", "model-evaluation", "data-pipelines", "docker-cv", "github-actions"]

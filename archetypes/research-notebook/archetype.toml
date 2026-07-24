@@ -7,4 +7,4 @@ description = "Jupyter-based experimentation environment for ML research"
 
 [skills]
 required = ["pytorch-lightning", "matplotlib", "loguru"]
-recommended = ["hydra-config", "wandb", "opencv"]
+recommended = ["hydra-config", "wandb", "opencv", "model-evaluation"]
