@@ -12,7 +12,7 @@ training project, inference service, and library package.
 ## Training Project pixi.toml
 
 ```toml
-[project]
+[workspace]
 name = "training-project"
 channels = ["conda-forge", "pytorch"]
 platforms = ["linux-64", "osx-arm64"]
@@ -52,7 +52,7 @@ typecheck = "mypy src/ --strict"
 ## Inference Service pixi.toml
 
 ```toml
-[project]
+[workspace]
 name = "inference-service"
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64"]
@@ -88,7 +88,7 @@ typecheck = "mypy src/ --strict"
 ## Library Package pixi.toml
 
 ```toml
-[project]
+[workspace]
 name = "cv-library"
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64", "osx-64"]

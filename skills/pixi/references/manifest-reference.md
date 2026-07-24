@@ -29,7 +29,7 @@ Never use conda, pip, or virtualenv directly.
 ## Minimal pixi.toml
 
 ```toml
-[project]
+[workspace]
 name = "my-cv-project"
 version = "0.1.0"
 description = "A computer vision project"
@@ -44,7 +44,7 @@ python = ">=3.11"
 ## Complete pixi.toml for a Training Project
 
 ```toml
-[project]
+[workspace]
 name = "semantic-segmentation"
 version = "0.1.0"
 description = "Semantic segmentation training pipeline"
@@ -130,7 +130,7 @@ requires-python = ">=3.11"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.pixi.project]
+[tool.pixi.workspace]
 channels = ["conda-forge", "pytorch"]
 platforms = ["linux-64", "osx-arm64"]
 
