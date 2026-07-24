@@ -46,6 +46,10 @@ checkpoints/
 
 # Data
 data/
+# ...but archetype templates ship data/ scaffolding that must be committed,
+# otherwise a scaffolded project is missing directories its README documents.
+!archetypes/*/template/**/data/
+!archetypes/*/template/**/data/**
 *.h5
 *.hdf5
 *.tfrecord
