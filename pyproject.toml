@@ -1,6 +1,6 @@
 [project]
 name = "whet"
-version = "0.1.0"
+version = "0.3.0"
 description = "Sharpen your AI coder — install expert skills into AI coding agents"
 authors = [{name = "Enrique G. Ortiz", email = "ortizeg@gmail.com"}]
 readme = "README.md"
