@@ -22,7 +22,7 @@ The service is designed around ONNX Runtime as the inference backend, which deco
 This is exactly what `whet init` scaffolds -- nothing here is aspirational.
 
 ```
-{{project_slug}}/
+${project_slug}/
 ├── .env.example                     # Environment variable template
 ├── .gitignore
 ├── Dockerfile                       # pixi-based production image
@@ -31,7 +31,7 @@ This is exactly what `whet init` scaffolds -- nothing here is aspirational.
 ├── pyproject.toml                   # Package metadata, ruff/mypy/pytest config
 ├── models/
 │   └── .gitkeep                     # ONNX model storage (git-ignored artifacts)
-├── src/{{package_name}}/
+├── src/${package_name}/
 │   ├── __init__.py
 │   ├── py.typed
 │   ├── app.py                       # FastAPI app, routes, lifespan model loading
@@ -72,7 +72,7 @@ those additions.
 
 ## Configuration and Environment Variables
 
-Configuration is managed through `pydantic-settings` in `src/{{package_name}}/config.py`, which reads from environment variables with an optional `.env` file fallback. All settings are validated at startup, and `.env.example` ships with the template.
+Configuration is managed through `pydantic-settings` in `src/${package_name}/config.py`, which reads from environment variables with an optional `.env` file fallback. All settings are validated at startup, and `.env.example` ships with the template.
 
 | Variable | Description | Default |
 |---|---|---|
@@ -122,7 +122,7 @@ cp .env.example .env
 cp /path/to/your/model.onnx models/model.onnx
 
 # Start the development server with hot reload
-uvicorn {{package_name}}.app:app --reload --port 8000
+uvicorn ${package_name}.app:app --reload --port 8000
 
 # ...or via the pixi task
 pixi run dev
@@ -134,10 +134,10 @@ Add dependencies with `pixi add <pkg>` (conda) or `pixi add --pypi <pkg>`.
 
 ```bash
 # Build the image (bootstraps pixi, runs `pixi install`, runs as non-root)
-docker build -t {{project_slug}}:latest .
+docker build -t ${project_slug}:latest .
 
 # Run container
-docker run -p 8000:8000 -v $(pwd)/models:/app/models {{project_slug}}:latest
+docker run -p 8000:8000 -v $(pwd)/models:/app/models ${project_slug}:latest
 ```
 
 For GPU serving, swap `onnxruntime` for `onnxruntime-gpu`, base the image on an
@@ -172,7 +172,7 @@ mypy src/ --strict
 
 ### Adding Custom Preprocessing and Postprocessing
 
-`src/{{package_name}}/inference/engine.py` ships a generic pipeline: resize ->
+`src/${package_name}/inference/engine.py` ships a generic pipeline: resize ->
 normalize (ImageNet mean/std) -> NCHW float32 -> `session.run` -> decode. The
 decoder understands an `(N, >=6)` detection tensor (`x1, y1, x2, y2, score,
 class_id`) and a 1-D class-logit vector; anything else logs a warning and
@@ -186,7 +186,7 @@ classification. Set `labels` on `InferenceConfig` for human-readable classes.
 
 ### Adding New Endpoints
 
-1. Define Pydantic request and response schemas in `src/{{package_name}}/schemas.py` (split it into a `schemas/` package once it grows).
+1. Define Pydantic request and response schemas in `src/${package_name}/schemas.py` (split it into a `schemas/` package once it grows).
 2. Add the route to `app.py`, or create a `routes/` package and register the router.
 3. Depend on the shared engine via the `EngineDep` annotated dependency so the model stays loaded once per process.
 4. Add corresponding tests in `tests/`.

@@ -1,0 +1,7 @@
+data_dir: data
+batch_size: 32
+num_workers: 4
+num_classes: 10
+image_size: 224
+train_size: 100
+val_size: 20
