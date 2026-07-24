@@ -28,7 +28,7 @@ A well-packaged library reduces duplicated code, ensures consistent behavior acr
 │       ├── test.yml                    # Test across Python versions
 │       ├── docs.yml                    # Build and deploy docs
 │       ├── publish.yml                 # Publish to PyPI on release
-│       └── code-review.yml            # Automated code review
+│       └── ci.yml                     # Lint, type check, tests
 ├── .gitignore
 ├── .pre-commit-config.yaml
 ├── pixi.toml

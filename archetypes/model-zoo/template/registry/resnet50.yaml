@@ -1,0 +1,40 @@
+# Model card — validated by ${package_name}.model_card.ModelCard.
+#
+# NOTE: the weights URL and sha256 below are PLACEHOLDERS. Replace them with
+# your own hosted artefact and its real digest:
+#     shasum -a 256 resnet50-v1.pth
+name: resnet50
+version: "1.0.0"
+task: classification
+architecture: resnet50
+description: >-
+  ResNet-50 image classifier trained on ImageNet-1K with standard
+  random-resized-crop and horizontal-flip augmentation.
+license: Apache-2.0
+training_dataset: ImageNet-1K
+num_parameters: 25557032
+
+inputs:
+  channels: 3
+  height: 224
+  width: 224
+  dtype: float32
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+weights:
+  url: https://models.example.com/resnet50/v1.0.0/resnet50-v1.pth
+  sha256: 3d05ac90a44862815a5c0fae3a4e1ee3b8e8e29bcb5c8c06459c6e865b342235
+  size_bytes: 102530333
+  weight_format: pytorch_state_dict
+
+evaluations:
+  - dataset: ImageNet-1K
+    split: val
+    metrics:
+      top1_accuracy: 0.7613
+      top5_accuracy: 0.9290
+    hardware: NVIDIA A100 40GB
+
+tags: [imagenet, classification, baseline]
+status: active

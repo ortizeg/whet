@@ -28,7 +28,7 @@ This archetype is not a training framework. It consumes trained checkpoints prod
 │   └── workflows/
 │       ├── benchmark.yml              # Scheduled benchmark runs
 │       ├── test.yml                   # Registry and loader tests
-│       └── code-review.yml           # Automated code review
+│       └── ci.yml                    # Lint, type check, tests
 ├── .gitignore
 ├── .pre-commit-config.yaml
 ├── pixi.toml

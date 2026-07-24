@@ -28,7 +28,7 @@ The core design principle is that every transformation applied to data must be e
 ├── .github/
 │   └── workflows/
 │       ├── test.yml                    # Pipeline test suite
-│       └── code-review.yml            # Automated code review
+│       └── ci.yml                     # Lint, type check, tests
 ├── .gitignore
 ├── .pre-commit-config.yaml
 ├── pixi.toml

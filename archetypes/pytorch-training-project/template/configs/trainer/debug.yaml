@@ -1,0 +1,9 @@
+# Single-batch smoke run: `python -m ${package_name}.train trainer=debug`
+max_epochs: 1
+accelerator: cpu
+devices: 1
+precision: 32-true
+log_every_n_steps: 1
+fast_dev_run: true
+limit_train_batches: 1.0
+limit_val_batches: 1.0

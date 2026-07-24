@@ -1,0 +1,60 @@
+# --- Jupyter -----------------------------------------------------------------
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+*-checkpoint.ipynb
+.jupyter/
+.virtual_documents/
+profile_default/
+ipython_config.py
+
+# --- Generated data and artifacts --------------------------------------------
+# Data and outputs are reproducible from code + config; only the directory
+# skeleton is tracked, via .gitkeep.
+data/**
+!data/**/
+!data/**/.gitkeep
+
+outputs/**
+!outputs/**/
+!outputs/**/.gitkeep
+
+*.npy
+*.npz
+*.parquet
+*.ckpt
+*.pt
+*.pth
+*.onnx
+
+# --- Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Tooling caches ----------------------------------------------------------
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# --- Environments ------------------------------------------------------------
+.pixi/
+pixi.lock
+.venv/
+venv/
+.env
+.python-version
+
+# --- Editors and OS ----------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

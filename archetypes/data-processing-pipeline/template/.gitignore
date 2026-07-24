@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+
+# Environments
+.venv/
+venv/
+.pixi/
+pixi.lock
+
+# Tooling caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Data — bulk data never lives in Git. Track the manifest fingerprint instead.
+data/
+!data/**/dataset.json
+
+# Reports
+reports/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/

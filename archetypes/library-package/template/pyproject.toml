@@ -1,0 +1,105 @@
+[project]
+name = "${project_slug}"
+dynamic = ["version"]
+description = "${description}"
+authors = [{name = "${author}"}]
+readme = "README.md"
+requires-python = ">=${python_version}"
+license = {text = "MIT"}
+keywords = ["library", "package"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+
+# Keep runtime dependencies minimal — every entry here is imposed on every
+# downstream consumer. Heavy or optional integrations belong in an extra.
+dependencies = [
+    "loguru>=0.7",
+    "pydantic>=2.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "ruff>=0.8",
+    "mypy>=1.11",
+    "pre-commit>=3.5",
+    "build>=1.2",
+    "twine>=5.1",
+]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.26",
+]
+all = ["${project_slug}[dev,docs]"]
+
+[project.scripts]
+${project_slug} = "${package_name}.cli:run"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/${package_name}/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/${package_name}"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/${package_name}/",
+    "tests/",
+    "docs/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE.txt",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [".pixi", ".venv", "build", "dist", "site"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "S", "B", "A", "C4", "T20", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "${python_version}"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v"
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    'if __name__ == .__main__.:',
+]

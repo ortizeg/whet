@@ -230,7 +230,7 @@ torch.onnx.export(
 The Code Review and Test Engineer agents are already configured:
 
 ```yaml
-# .github/workflows/code-review.yml — checks formatting, linting, types
+# .github/workflows/ci.yml — checks formatting, linting, types
 # .github/workflows/test.yml — runs tests, enforces 80% coverage
 ```
 
